@@ -1,0 +1,48 @@
+// ============================================================================
+// Authentication Routes
+// Located: backend/src/routes/authRoutes.js
+// Base Path: /api/auth
+// ============================================================================
+
+const express = require('express');
+const router = express.Router();
+const authController = require('../controllers/authController');
+const { authenticate } = require('../middleware/auth');
+
+// ============================================================================
+// PUBLIC ROUTES (No authentication required)
+// ============================================================================
+
+// User Registration
+// POST /api/auth/register
+router.post('/register', authController.register);
+
+// User Login
+// POST /api/auth/login
+router.post('/login', authController.login);
+
+// Forgot Password - Request reset token
+// POST /api/auth/forgot-password
+router.post('/forgot-password', authController.forgotPassword);
+
+// Reset Password - Use token to set new password
+// POST /api/auth/reset-password
+router.post('/reset-password', authController.resetPassword);
+
+// Refresh Access Token
+// POST /api/auth/refresh-token
+router.post('/refresh-token', authController.refreshToken);
+
+// ============================================================================
+// PROTECTED ROUTES (Authentication required)
+// ============================================================================
+
+// Get Current User Info
+// GET /api/auth/me
+router.get('/me', authenticate, authController.getCurrentUser);
+
+// Logout
+// POST /api/auth/logout
+router.post('/logout', authenticate, authController.logout);
+
+module.exports = router;

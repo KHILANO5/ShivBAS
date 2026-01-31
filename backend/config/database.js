@@ -44,12 +44,9 @@ const testConnection = async () => {
   } catch (error) {
     console.error('❌ Database Connection Failed:', error.message);
     console.error('Make sure MySQL is running and .env variables are correct');
-    process.exit(1);
+    throw error;
   }
 };
-
-// Execute connection test on module load
-testConnection();
 
 /**
  * Execute a query
