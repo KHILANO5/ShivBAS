@@ -17,6 +17,7 @@ router.delete('/analytics/:id', authenticate, requireAdmin, masterDataController
 // Products Routes
 router.post('/products', authenticate, requireAdmin, masterDataController.createProduct);
 router.get('/products', authenticate, masterDataController.getProducts);
+router.put('/products/:id', authenticate, requireAdmin, masterDataController.updateProduct);
 
 // Contacts Routes
 router.post('/contacts', authenticate, requireAdmin, masterDataController.createContact);

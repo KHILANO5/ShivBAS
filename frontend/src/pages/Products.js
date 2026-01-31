@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { productsAPI } from '../services/api';
 
@@ -12,21 +12,28 @@ const Products = () => {
     const [filterCategory, setFilterCategory] = useState('all');
     const [filterStatus, setFilterStatus] = useState('active');
     const [searchTerm, setSearchTerm] = useState('');
+    const [notification, setNotification] = useState({ show: false, message: '', type: '' });
+    const [showArchiveModal, setShowArchiveModal] = useState(false);
+    const [productToArchive, setProductToArchive] = useState(null);
 
     // Form state matching database schema
     const [formData, setFormData] = useState({
         name: '',
         category: '',
         unit_price: '',
+        purchase_price: '',
         tax_rate: '18.00',
         status: 'active'
     });
 
-    useEffect(() => {
-        fetchData();
+    const showNotification = useCallback((message, type = 'success') => {
+        setNotification({ show: true, message, type });
+        setTimeout(() => {
+            setNotification({ show: false, message: '', type: '' });
+        }, 3000);
     }, []);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             const response = await productsAPI.getAll();
@@ -34,11 +41,14 @@ const Products = () => {
             setProducts(data);
         } catch (error) {
             console.error('Error fetching products:', error);
-            alert('Failed to fetch products');
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -51,19 +61,18 @@ const Products = () => {
     const handleCreateProduct = async (e) => {
         e.preventDefault();
 
-        // Validation
         if (!formData.name || !formData.category || !formData.unit_price) {
-            alert('Please fill in all required fields');
+            showNotification('Please fill in all required fields', 'error');
             return;
         }
 
         if (parseFloat(formData.unit_price) <= 0) {
-            alert('Unit price must be greater than 0');
+            showNotification('Unit price must be greater than 0', 'error');
             return;
         }
 
-        if (parseFloat(formData.tax_rate) < 0 || parseFloat(formData.tax_rate) > 100) {
-            alert('Tax rate must be between 0 and 100');
+        if (formData.purchase_price && parseFloat(formData.purchase_price) > parseFloat(formData.unit_price)) {
+            showNotification('Purchase price should not be greater than unit price', 'error');
             return;
         }
 
@@ -72,19 +81,20 @@ const Products = () => {
                 name: formData.name,
                 category: formData.category,
                 unit_price: parseFloat(formData.unit_price),
+                purchase_price: parseFloat(formData.purchase_price) || 0,
                 tax_rate: parseFloat(formData.tax_rate),
                 status: formData.status
             });
 
             if (response.data.success) {
-                alert('Product created successfully!');
-                await fetchData(); // Refresh the list
+                showNotification('Product created successfully!', 'success');
+                await fetchData();
                 setShowCreateModal(false);
                 resetForm();
             }
         } catch (error) {
             console.error('Error creating product:', error);
-            alert(error.response?.data?.message || 'Failed to create product');
+            showNotification(error.response?.data?.error || error.response?.data?.message || 'Failed to create product', 'error');
         }
     };
 
@@ -96,50 +106,44 @@ const Products = () => {
                 name: formData.name,
                 category: formData.category,
                 unit_price: parseFloat(formData.unit_price),
+                purchase_price: parseFloat(formData.purchase_price) || 0,
                 tax_rate: parseFloat(formData.tax_rate),
                 status: formData.status
             });
 
             if (response.data.success) {
-                alert('Product updated successfully!');
-                await fetchData(); // Refresh the list
+                showNotification('Product updated successfully!', 'success');
+                await fetchData();
                 setShowEditModal(false);
                 setSelectedProduct(null);
                 resetForm();
             }
         } catch (error) {
             console.error('Error updating product:', error);
-            alert(error.response?.data?.message || 'Failed to update product');
+            showNotification(error.response?.data?.error || error.response?.data?.message || 'Failed to update product', 'error');
         }
     };
 
-    const handleDeleteProduct = async (id) => {
-        if (window.confirm('Are you sure you want to delete this product? This may affect existing invoices.')) {
-            try {
-                const response = await productsAPI.delete(id);
-                if (response.data.success) {
-                    alert('Product deleted successfully!');
-                    await fetchData(); // Refresh the list
-                }
-            } catch (error) {
-                console.error('Error deleting product:', error);
-                alert(error.response?.data?.message || 'Failed to delete product');
-            }
-        }
+    const handleArchiveProduct = (id) => {
+        setProductToArchive(id);
+        setShowArchiveModal(true);
     };
 
-    const handleArchiveProduct = async (id) => {
-        if (window.confirm('Are you sure you want to archive this product?')) {
-            try {
-                const response = await productsAPI.update(id, { status: 'archived' });
-                if (response.data.success) {
-                    alert('Product archived successfully!');
-                    await fetchData(); // Refresh the list
-                }
-            } catch (error) {
-                console.error('Error archiving product:', error);
-                alert(error.response?.data?.message || 'Failed to archive product');
+    const confirmArchiveProduct = async () => {
+        if (!productToArchive) return;
+
+        try {
+            const response = await productsAPI.update(productToArchive, { status: 'archived' });
+            if (response.data.success) {
+                showNotification('Product archived successfully!', 'success');
+                await fetchData();
             }
+        } catch (error) {
+            console.error('Error archiving product:', error);
+            showNotification(error.response?.data?.error || 'Failed to archive product', 'error');
+        } finally {
+            setShowArchiveModal(false);
+            setProductToArchive(null);
         }
     };
 
@@ -147,12 +151,12 @@ const Products = () => {
         try {
             const response = await productsAPI.update(id, { status: 'active' });
             if (response.data.success) {
-                alert('Product activated successfully!');
-                await fetchData(); // Refresh the list
+                showNotification('Product activated successfully!', 'success');
+                await fetchData();
             }
         } catch (error) {
             console.error('Error activating product:', error);
-            alert(error.response?.data?.message || 'Failed to activate product');
+            showNotification(error.response?.data?.error || 'Failed to activate product', 'error');
         }
     };
 
@@ -161,8 +165,9 @@ const Products = () => {
         setFormData({
             name: product.name,
             category: product.category,
-            unit_price: product.unit_price.toString(),
-            tax_rate: product.tax_rate.toString(),
+            unit_price: product.unit_price?.toString() || '',
+            purchase_price: product.purchase_price?.toString() || '',
+            tax_rate: product.tax_rate?.toString() || '18.00',
             status: product.status
         });
         setShowEditModal(true);
@@ -173,6 +178,7 @@ const Products = () => {
             name: '',
             category: '',
             unit_price: '',
+            purchase_price: '',
             tax_rate: '18.00',
             status: 'active'
         });
@@ -186,18 +192,29 @@ const Products = () => {
         const matchesCategory = filterCategory === 'all' || product.category === filterCategory;
         const matchesStatus = filterStatus === 'all' || product.status === filterStatus;
         const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.category.toLowerCase().includes(searchTerm.toLowerCase());
+            product.category?.toLowerCase().includes(searchTerm.toLowerCase());
         return matchesCategory && matchesStatus && matchesSearch;
     });
 
-    // Calculate statistics
+    // Calculate statistics from all products, not filtered
     const stats = {
-        total: filteredProducts.length,
-        active: filteredProducts.filter(p => p.status === 'active').length,
-        archived: filteredProducts.filter(p => p.status === 'archived').length,
-        avgPrice: filteredProducts.length > 0
-            ? filteredProducts.reduce((sum, p) => sum + p.unit_price, 0) / filteredProducts.length
-            : 0
+        total: products.length,
+        active: products.filter(p => p.status === 'active').length,
+        archived: products.filter(p => p.status === 'archived').length,
+        avgProfitMargin: (() => {
+            const productsWithPrices = products.filter(p => 
+                p.unit_price && p.purchase_price && 
+                !isNaN(parseFloat(p.unit_price)) && 
+                !isNaN(parseFloat(p.purchase_price)) &&
+                parseFloat(p.unit_price) > 0
+            );
+            if (productsWithPrices.length === 0) return 0;
+            const totalMargin = productsWithPrices.reduce((acc, p) => {
+                const margin = ((parseFloat(p.unit_price) - parseFloat(p.purchase_price)) / parseFloat(p.unit_price)) * 100;
+                return acc + margin;
+            }, 0);
+            return totalMargin / productsWithPrices.length;
+        })()
     };
 
     const getStatusBadge = (status) => {
@@ -246,8 +263,8 @@ const Products = () => {
                         <p className="text-2xl font-bold text-gray-600 mt-2">{stats.archived}</p>
                     </div>
                     <div className="card">
-                        <p className="text-sm font-medium text-gray-600">Avg Price</p>
-                        <p className="text-2xl font-bold text-blue-600 mt-2">₹{stats.avgPrice.toFixed(2)}</p>
+                        <p className="text-sm font-medium text-gray-600">Avg Profit Margin</p>
+                        <p className="text-2xl font-bold text-blue-600 mt-2">{stats.avgProfitMargin.toFixed(1)}%</p>
                     </div>
                 </div>
 
@@ -345,7 +362,7 @@ const Products = () => {
                                     <div className="space-y-3 mb-4">
                                         <div className="flex justify-between items-center">
                                             <span className="text-sm text-gray-600">Unit Price:</span>
-                                            <span className="text-lg font-bold text-primary-600">₹{product.unit_price.toLocaleString()}</span>
+                                            <span className="text-lg font-bold text-primary-600">₹{parseFloat(product.unit_price || 0).toLocaleString()}</span>
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <span className="text-sm text-gray-600">Tax Rate:</span>
@@ -354,7 +371,16 @@ const Products = () => {
                                         <div className="flex justify-between items-center">
                                             <span className="text-sm text-gray-600">Price + Tax:</span>
                                             <span className="text-sm font-semibold text-green-600">
-                                                ₹{(product.unit_price * (1 + product.tax_rate / 100)).toFixed(2)}
+                                                ₹{(parseFloat(product.unit_price || 0) * (1 + parseFloat(product.tax_rate || 0) / 100)).toFixed(2)}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm text-gray-600">Profit Margin:</span>
+                                            <span className={`text-sm font-semibold ${product.unit_price && product.purchase_price && parseFloat(product.unit_price) > parseFloat(product.purchase_price) ? 'text-green-600' : 'text-gray-600'}`}>
+                                                {product.unit_price && parseFloat(product.unit_price) > 0 
+                                                    ? `${(((parseFloat(product.unit_price) - parseFloat(product.purchase_price || 0)) / parseFloat(product.unit_price)) * 100).toFixed(1)}%`
+                                                    : '0%'
+                                                }
                                             </span>
                                         </div>
                                     </div>
@@ -389,12 +415,6 @@ const Products = () => {
                                                         Activate
                                                     </button>
                                                 )}
-                                                <button
-                                                    onClick={() => handleDeleteProduct(product.id)}
-                                                    className="flex-1 text-sm text-red-600 hover:text-red-900 font-medium"
-                                                >
-                                                    Delete
-                                                </button>
                                             </div>
                                         )}
                                     </div>
@@ -479,6 +499,23 @@ const Products = () => {
 
                                 </div>
 
+                                {/* Purchase Price */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Purchase Price (₹)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        name="purchase_price"
+                                        value={formData.purchase_price}
+                                        onChange={handleInputChange}
+                                        className="input-field"
+                                        placeholder="300.00"
+                                        min="0"
+                                        step="0.01"
+                                    />
+                                </div>
+
                                 {/* Tax Rate */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -498,18 +535,6 @@ const Products = () => {
 
                                 </div>
 
-                                {/* Price Preview */}
-                                {formData.unit_price && (
-                                    <div className="bg-blue-50 p-4 rounded-lg">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm font-medium text-gray-700">Price including tax:</span>
-                                            <span className="text-lg font-bold text-blue-600">
-                                                ₹{(parseFloat(formData.unit_price || 0) * (1 + parseFloat(formData.tax_rate || 0) / 100)).toFixed(2)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-
                                 {/* Status */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -524,8 +549,27 @@ const Products = () => {
                                         <option value="active">Active</option>
                                         <option value="archived">Archived</option>
                                     </select>
-
                                 </div>
+
+                                {/* Price Preview */}
+                                {formData.unit_price && (
+                                    <div className="bg-blue-50 p-4 rounded-lg space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm font-medium text-gray-700">Price including tax:</span>
+                                            <span className="text-lg font-bold text-blue-600">
+                                                ₹{(parseFloat(formData.unit_price || 0) * (1 + parseFloat(formData.tax_rate || 0) / 100)).toFixed(2)}
+                                            </span>
+                                        </div>
+                                        {formData.purchase_price && parseFloat(formData.purchase_price) > 0 && (
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm font-medium text-gray-700">Profit Margin:</span>
+                                                <span className={`text-lg font-bold ${parseFloat(formData.unit_price) > parseFloat(formData.purchase_price) ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {(((parseFloat(formData.unit_price) - parseFloat(formData.purchase_price)) / parseFloat(formData.unit_price)) * 100).toFixed(1)}%
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 {/* Form Actions */}
                                 <div className="flex justify-end gap-3 pt-4">
@@ -618,6 +662,22 @@ const Products = () => {
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Purchase Price (₹)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        name="purchase_price"
+                                        value={formData.purchase_price}
+                                        onChange={handleInputChange}
+                                        className="input-field"
+                                        placeholder="300.00"
+                                        min="0"
+                                        step="0.01"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Tax Rate (%)
                                     </label>
                                     <input
@@ -633,13 +693,21 @@ const Products = () => {
                                 </div>
 
                                 {formData.unit_price && (
-                                    <div className="bg-blue-50 p-4 rounded-lg">
+                                    <div className="bg-blue-50 p-4 rounded-lg space-y-2">
                                         <div className="flex justify-between items-center">
                                             <span className="text-sm font-medium text-gray-700">Price including tax:</span>
                                             <span className="text-lg font-bold text-blue-600">
                                                 ₹{(parseFloat(formData.unit_price || 0) * (1 + parseFloat(formData.tax_rate || 0) / 100)).toFixed(2)}
                                             </span>
                                         </div>
+                                        {formData.purchase_price && parseFloat(formData.purchase_price) > 0 && (
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm font-medium text-gray-700">Profit Margin:</span>
+                                                <span className={`text-lg font-bold ${parseFloat(formData.unit_price) > parseFloat(formData.purchase_price) ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {(((parseFloat(formData.unit_price) - parseFloat(formData.purchase_price)) / parseFloat(formData.unit_price)) * 100).toFixed(1)}%
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -675,6 +743,88 @@ const Products = () => {
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Archive Confirmation Modal */}
+            {showArchiveModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-md w-full p-6">
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                                <svg className="w-6 h-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900">Archive Product</h3>
+                                <p className="text-sm text-gray-600 mt-1">Are you sure you want to archive this product? You can restore it later.</p>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowArchiveModal(false);
+                                    setProductToArchive(null);
+                                }}
+                                className="btn-secondary"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmArchiveProduct}
+                                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                            >
+                                Archive
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Notification Toast */}
+            {notification.show && (
+                <div className="fixed top-4 right-4 z-50 animate-slide-in">
+                    <div className={`rounded-lg shadow-lg p-4 max-w-md ${
+                        notification.type === 'success' ? 'bg-green-50 border border-green-200' :
+                        notification.type === 'error' ? 'bg-red-50 border border-red-200' :
+                        'bg-blue-50 border border-blue-200'
+                    }`}>
+                        <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0">
+                                {notification.type === 'success' ? (
+                                    <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                ) : notification.type === 'error' ? (
+                                    <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                ) : (
+                                    <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <p className={`text-sm font-medium ${
+                                    notification.type === 'success' ? 'text-green-800' :
+                                    notification.type === 'error' ? 'text-red-800' :
+                                    'text-blue-800'
+                                }`}>
+                                    {notification.message}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setNotification({ show: false, message: '', type: '' })}
+                                className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -100,34 +100,97 @@ const getAnalytics = async (req, res) => {
 const updateAnalytics = async (req, res) => {
   try {
     const { id } = req.params;
-    const { code, description, category } = req.body;
+    const { event_name, partner_tag, partner_id, product_id, product_category, no_of_units, unit_price, profit, profit_margin_percentage, status } = req.body;
 
+    // Check if analytics record exists
     const [existing] = await pool.query(
-      'SELECT analytics_id FROM analytics_codes WHERE analytics_id = ?',
+      'SELECT id FROM analytics WHERE id = ?',
       [id]
     );
 
     if (existing.length === 0) {
       return res.status(404).json({
         success: false,
-        error: 'Analytics code not found'
+        error: 'Analytics record not found'
       });
     }
 
+    // Build dynamic update query
+    const updates = [];
+    const params = [];
+
+    if (event_name !== undefined) {
+      updates.push('event_name = ?');
+      params.push(event_name);
+    }
+    if (partner_tag !== undefined) {
+      updates.push('partner_tag = ?');
+      params.push(partner_tag);
+    }
+    if (partner_id !== undefined) {
+      updates.push('partner_id = ?');
+      params.push(partner_id);
+    }
+    if (product_id !== undefined) {
+      updates.push('product_id = ?');
+      params.push(product_id);
+    }
+    if (product_category !== undefined) {
+      updates.push('product_category = ?');
+      params.push(product_category);
+    }
+    if (no_of_units !== undefined) {
+      updates.push('no_of_units = ?');
+      params.push(no_of_units);
+    }
+    if (unit_price !== undefined) {
+      updates.push('unit_price = ?');
+      params.push(unit_price);
+    }
+    if (profit !== undefined) {
+      updates.push('profit = ?');
+      params.push(profit);
+    }
+    if (profit_margin_percentage !== undefined) {
+      updates.push('profit_margin_percentage = ?');
+      params.push(profit_margin_percentage);
+    }
+    if (status !== undefined) {
+      updates.push('status = ?');
+      params.push(status);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No fields to update'
+      });
+    }
+
+    updates.push('updated_at = NOW()');
+    params.push(id);
+
     await pool.query(
-      'UPDATE analytics_codes SET code = ?, description = ?, category = ?, updated_at = CURRENT_TIMESTAMP WHERE analytics_id = ?',
-      [code, description, category || null, id]
+      `UPDATE analytics SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+
+    // Fetch updated analytics record
+    const [updated] = await pool.query(
+      'SELECT * FROM analytics WHERE id = ?',
+      [id]
     );
 
     res.json({
       success: true,
-      message: 'Analytics code updated successfully'
+      message: 'Analytics record updated successfully',
+      data: updated[0]
     });
   } catch (error) {
     console.error('Update analytics error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to update analytics code'
+      error: 'Failed to update analytics record'
     });
   }
 };
@@ -173,7 +236,7 @@ const deleteAnalytics = async (req, res) => {
 // POST /api/products
 const createProduct = async (req, res) => {
   try {
-    const { name, category, unit_price, tax_rate } = req.body;
+    const { name, category, unit_price, purchase_price, tax_rate } = req.body;
 
     if (!name || !category || !unit_price) {
       return res.status(400).json({
@@ -183,8 +246,8 @@ const createProduct = async (req, res) => {
     }
 
     const [result] = await pool.query(
-      'INSERT INTO products (name, category, unit_price, tax_rate, status) VALUES (?, ?, ?, ?, "active")',
-      [name, category, unit_price, tax_rate || 0]
+      'INSERT INTO products (name, category, unit_price, purchase_price, tax_rate, status) VALUES (?, ?, ?, ?, ?, "active")',
+      [name, category, unit_price, purchase_price || 0, tax_rate || 0]
     );
 
     res.status(201).json({
@@ -195,6 +258,7 @@ const createProduct = async (req, res) => {
         name,
         category,
         unit_price,
+        purchase_price: purchase_price || 0,
         tax_rate: tax_rate || 0,
         status: 'active'
       }
@@ -239,6 +303,90 @@ const getProducts = async (req, res) => {
   }
 };
 
+// Update Product
+// PUT /api/products/:id
+const updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, category, unit_price, purchase_price, tax_rate, status } = req.body;
+
+    // Check if product exists
+    const [existing] = await pool.query(
+      'SELECT id FROM products WHERE id = ?',
+      [id]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Product not found'
+      });
+    }
+
+    // Build dynamic update query
+    const updates = [];
+    const params = [];
+
+    if (name !== undefined) {
+      updates.push('name = ?');
+      params.push(name);
+    }
+    if (category !== undefined) {
+      updates.push('category = ?');
+      params.push(category);
+    }
+    if (unit_price !== undefined) {
+      updates.push('unit_price = ?');
+      params.push(unit_price);
+    }
+    if (purchase_price !== undefined) {
+      updates.push('purchase_price = ?');
+      params.push(purchase_price);
+    }
+    if (tax_rate !== undefined) {
+      updates.push('tax_rate = ?');
+      params.push(tax_rate);
+    }
+    if (status !== undefined) {
+      updates.push('status = ?');
+      params.push(status);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No fields to update'
+      });
+    }
+
+    updates.push('updated_at = NOW()');
+    params.push(id);
+
+    await pool.query(
+      `UPDATE products SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+
+    // Fetch updated product
+    const [updated] = await pool.query(
+      'SELECT * FROM products WHERE id = ?',
+      [id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Product updated successfully',
+      data: updated[0]
+    });
+  } catch (error) {
+    console.error('Update product error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update product'
+    });
+  }
+};
+
 // ============================================================================
 // CONTACTS
 // ============================================================================
@@ -247,26 +395,35 @@ const getProducts = async (req, res) => {
 // POST /api/contacts
 const createContact = async (req, res) => {
   try {
-    const { name, type, email, phone, linked_user_id } = req.body;
+    console.log('Create contact request received');
+    console.log('Request body:', req.body);
+    console.log('User:', req.user);
+    
+    const { name, type, email, phone, street, city, state, country, pincode, tags, image_url, linked_user_id } = req.body;
 
-    if (!name || !type || !email) {
+    if (!name || !type) {
+      console.log('Validation failed: name or type missing');
       return res.status(400).json({
         success: false,
-        error: 'Name, type, and email are required'
+        error: 'Name and type are required'
       });
     }
 
     if (!['customer', 'vendor', 'partner'].includes(type)) {
+      console.log('Validation failed: invalid type');
       return res.status(400).json({
         success: false,
         error: 'Type must be customer, vendor, or partner'
       });
     }
 
+    console.log('Inserting contact into database...');
     const [result] = await pool.query(
-      'INSERT INTO contacts (name, type, email, phone, linked_user_id, status) VALUES (?, ?, ?, ?, ?, "active")',
-      [name, type, email, phone || null, linked_user_id || null]
+      'INSERT INTO contacts (name, type, email, phone, street, city, state, country, pincode, tags, image_url, linked_user_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "active")',
+      [name, type, email || null, phone || null, street || null, city || null, state || null, country || null, pincode || null, tags || null, image_url || null, linked_user_id || null]
     );
+
+    console.log('Contact created successfully with ID:', result.insertId);
 
     res.status(201).json({
       success: true,
@@ -275,8 +432,15 @@ const createContact = async (req, res) => {
         id: result.insertId,
         name,
         type,
-        email,
+        email: email || null,
         phone: phone || null,
+        street: street || null,
+        city: city || null,
+        state: state || null,
+        country: country || null,
+        pincode: pincode || null,
+        tags: tags || null,
+        image_url: image_url || null,
         status: 'active'
       }
     });
@@ -330,7 +494,7 @@ const getContacts = async (req, res) => {
 const updateContact = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, type, email, phone, linked_user_id, status } = req.body;
+    const { name, type, email, phone, street, city, state, country, pincode, tags, image_url, linked_user_id, status } = req.body;
 
     // Check if contact exists
     const [existing] = await pool.query(
@@ -370,6 +534,34 @@ const updateContact = async (req, res) => {
     if (phone !== undefined) {
       updates.push('phone = ?');
       params.push(phone);
+    }
+    if (street !== undefined) {
+      updates.push('street = ?');
+      params.push(street);
+    }
+    if (city !== undefined) {
+      updates.push('city = ?');
+      params.push(city);
+    }
+    if (state !== undefined) {
+      updates.push('state = ?');
+      params.push(state);
+    }
+    if (country !== undefined) {
+      updates.push('country = ?');
+      params.push(country);
+    }
+    if (pincode !== undefined) {
+      updates.push('pincode = ?');
+      params.push(pincode);
+    }
+    if (tags !== undefined) {
+      updates.push('tags = ?');
+      params.push(tags);
+    }
+    if (image_url !== undefined) {
+      updates.push('image_url = ?');
+      params.push(image_url);
     }
     if (linked_user_id !== undefined) {
       updates.push('linked_user_id = ?');
@@ -503,6 +695,7 @@ module.exports = {
   deleteAnalytics,
   createProduct,
   getProducts,
+  updateProduct,
   createContact,
   getContacts,
   updateContact,

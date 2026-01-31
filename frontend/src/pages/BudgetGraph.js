@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { mockAPI } from '../services/mockAPI';
+import { budgetsAPI, revisedBudgetsAPI } from '../services/api';
 
 const BudgetGraph = () => {
     const [budgets, setBudgets] = useState([]);
@@ -15,10 +15,10 @@ const BudgetGraph = () => {
         setLoading(true);
         try {
             const [budgetsRes, revisedRes] = await Promise.all([
-                mockAPI.getBudgets(),
-                mockAPI.getRevisedBudgets()
+                budgetsAPI.getAll(),
+                revisedBudgetsAPI.getAll()
             ]);
-            setBudgets(budgetsRes.data.data.budgets || []);
+            setBudgets(budgetsRes.data.data || []);
             setRevisedBudgets(revisedRes.data.data || []);
         } catch (error) {
             console.error('Error fetching graph data:', error);

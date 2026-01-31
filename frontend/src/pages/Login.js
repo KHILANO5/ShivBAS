@@ -13,6 +13,7 @@ const Login = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
 
     const handleChange = (e) => {
         setFormData({
@@ -29,12 +30,31 @@ const Login = () => {
 
         // Validation
         if (!formData.login_id || !formData.password) {
-            setError('Please fill in all fields');
+            if (!formData.login_id && !formData.password) {
+                setError('Please enter both your Login ID and password.');
+            } else if (!formData.login_id) {
+                setError('Please enter your Login ID.');
+            } else {
+                setError('Please enter your password.');
+            }
             setLoading(false);
             return;
         }
 
-        const result = await login(formData);
+        // Additional validation for login_id format
+        if (formData.login_id.length < 6 || formData.login_id.length > 12) {
+            setError('Login ID must be between 6 and 12 characters.');
+            setLoading(false);
+            return;
+        }
+
+        if (!/^[a-zA-Z0-9_]+$/.test(formData.login_id)) {
+            setError('Login ID can only contain letters, numbers, and underscores.');
+            setLoading(false);
+            return;
+        }
+
+        const result = await login({ ...formData, remember: rememberMe });
         setLoading(false);
 
         if (result.success) {
@@ -66,8 +86,16 @@ const Login = () => {
                 <div className="card">
                     <form className="space-y-6" onSubmit={handleSubmit}>
                         {error && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                                {error}
+                            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg" role="alert">
+                                <div className="flex items-start">
+                                    <svg className="w-5 h-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                    </svg>
+                                    <div>
+                                        <p className="font-semibold text-sm">Login Failed</p>
+                                        <p className="text-sm mt-1">{error}</p>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -132,10 +160,12 @@ const Login = () => {
                                     id="remember-me"
                                     name="remember-me"
                                     type="checkbox"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
                                     className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                                 />
                                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                                    Remember me
+                                    Remember me for 30 days
                                 </label>
                             </div>
 

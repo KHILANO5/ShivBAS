@@ -16,7 +16,8 @@ const crypto = require('crypto');
 // ============================================================================
 const register = async (req, res) => {
   try {
-    const { login_id, email, password, name } = req.body;
+    const { login_id, password, name } = req.body;
+    const email = req.body.email?.toLowerCase().trim();
 
     // Validate required fields
     if (!login_id || !email || !password || !name) {
@@ -87,15 +88,25 @@ const register = async (req, res) => {
       [login_id, email, hashedPassword, name, 'portal']
     );
 
+    const user_id = result.insertId;
+
+    // Generate tokens for auto-login
+    const accessToken = generateAccessToken(user_id, 'portal');
+    const refreshToken = generateRefreshToken(user_id);
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
       data: {
-        user_id: result.insertId,
-        login_id,
-        email,
-        name,
-        role: 'portal'
+        user: {
+          user_id,
+          login_id,
+          email,
+          name,
+          role: 'portal'
+        },
+        accessToken,
+        refreshToken
       }
     });
   } catch (error) {
@@ -113,7 +124,8 @@ const register = async (req, res) => {
 // ============================================================================
 const login = async (req, res) => {
   try {
-    const { login_id, password } = req.body;
+    const { login_id, password, remember } = req.body;
+    const rememberMe = remember === true;
 
     if (!login_id || !password) {
       return res.status(400).json({
@@ -124,18 +136,26 @@ const login = async (req, res) => {
 
     // Find user
     const [users] = await pool.query(
-      'SELECT id as user_id, login_id, email, password, name, role FROM users WHERE login_id = ?',
+      'SELECT id, login_id, email, password, name, role, signup_type, status, created_at, updated_at FROM users WHERE login_id = ?',
       [login_id]
     );
 
     if (users.length === 0) {
-      return res.status(404).json({
+      return res.status(401).json({
         success: false,
-        error: 'User not found'
+        error: 'Wrong username or password'
       });
     }
 
     const user = users[0];
+
+    // Check if account is active
+    if (user.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        error: 'Your account has been suspended or deactivated. Please contact the administrator.'
+      });
+    }
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -143,24 +163,28 @@ const login = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid login_id or password'
+        error: 'Wrong username or password'
       });
     }
 
-    // Generate tokens
-    const accessToken = generateAccessToken(user.user_id, user.role);
-    const refreshToken = generateRefreshToken(user.user_id);
+    // Generate tokens with remember me support (use user.id, not user.user_id)
+    const accessToken = generateAccessToken(user.id, user.role, rememberMe);
+    const refreshToken = generateRefreshToken(user.id, rememberMe);
 
     res.json({
       success: true,
       message: 'Login successful',
       data: {
         user: {
-          user_id: user.user_id,
+          user_id: user.id,
           login_id: user.login_id,
           email: user.email,
           name: user.name,
-          role: user.role
+          role: user.role,
+          signup_type: user.signup_type,
+          status: user.status,
+          created_at: user.created_at,
+          updated_at: user.updated_at
         },
         accessToken,
         refreshToken
@@ -180,12 +204,46 @@ const login = async (req, res) => {
 // GET /api/auth/me
 // ============================================================================
 const getCurrentUser = async (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      user: req.user
+  try {
+    const userId = req.user.userId;
+
+    const [users] = await pool.query(
+      'SELECT id, login_id, email, name, role, signup_type, status, created_at, updated_at FROM users WHERE id = ?',
+      [userId]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
     }
-  });
+
+    const user = users[0];
+
+    res.json({
+      success: true,
+      data: {
+        user: {
+          user_id: user.id,
+          login_id: user.login_id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          signup_type: user.signup_type,
+          status: user.status,
+          created_at: user.created_at,
+          updated_at: user.updated_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get current user error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch user data'
+    });
+  }
 };
 
 // ============================================================================
@@ -264,7 +322,7 @@ const refreshToken = async (req, res) => {
 // ============================================================================
 const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = req.body.email?.toLowerCase().trim();
 
     if (!email) {
       return res.status(400).json({
@@ -379,6 +437,156 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// ============================================================================
+// UPDATE PROFILE
+// PUT /api/auth/profile
+// ============================================================================
+const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { name, email } = req.body;
+
+    if (!name && !email) {
+      return res.status(400).json({
+        success: false,
+        error: 'At least one field is required to update'
+      });
+    }
+
+    // Check if email already exists (if updating email)
+    if (email) {
+      const emailLower = email.toLowerCase().trim();
+      const [existingEmail] = await pool.query(
+        'SELECT id FROM users WHERE email = ? AND id != ?',
+        [emailLower, userId]
+      );
+
+      if (existingEmail.length > 0) {
+        return res.status(409).json({
+          success: false,
+          error: 'Email already registered'
+        });
+      }
+    }
+
+    // Build update query dynamically
+    const updates = [];
+    const params = [];
+
+    if (name) {
+      updates.push('name = ?');
+      params.push(name);
+    }
+    if (email) {
+      updates.push('email = ?');
+      params.push(email.toLowerCase().trim());
+    }
+
+    params.push(userId);
+
+    await pool.query(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+
+    // Get updated user
+    const [users] = await pool.query(
+      'SELECT id as user_id, login_id, email, name, role, signup_type, status, created_at, updated_at FROM users WHERE id = ?',
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        user: users[0]
+      }
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update profile'
+    });
+  }
+};
+
+// ============================================================================
+// CHANGE PASSWORD
+// POST /api/auth/change-password
+// ============================================================================
+const changePassword = async (req, res) => {
+  try {
+    console.log('Change password request received for user:', req.user.userId); // Debug log
+    console.log('Request body:', { ...req.body, current_password: '***', new_password: '***' }); // Debug log (hide passwords)
+    
+    const userId = req.user.userId;
+    const { current_password, new_password } = req.body;
+
+    if (!current_password || !new_password) {
+      console.log('Missing required fields'); // Debug log
+      return res.status(400).json({
+        success: false,
+        error: 'Current password and new password are required'
+      });
+    }
+
+    // Validate new password
+    const passwordValidation = validatePassword(new_password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: passwordValidation.errors[0]
+      });
+    }
+
+    // Get user
+    const [users] = await pool.query(
+      'SELECT password FROM users WHERE id = ?',
+      [userId]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(current_password, users[0].password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: 'Current password is incorrect'
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(new_password, 10);
+
+    // Update password
+    await pool.query(
+      'UPDATE users SET password = ? WHERE id = ?',
+      [hashedPassword, userId]
+    );
+
+    console.log('Password updated successfully for user:', userId); // Debug log
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to change password'
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -386,5 +594,7 @@ module.exports = {
   logout,
   refreshToken,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  updateProfile,
+  changePassword
 };

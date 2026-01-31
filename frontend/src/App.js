@@ -15,7 +15,6 @@ import Invoices from './pages/Invoices';
 import Products from './pages/Products';
 import Contacts from './pages/Contacts';
 import Profile from './pages/Profile';
-import Settings from './pages/Settings';
 import PurchaseOrder from './pages/PurchaseOrder';
 import PurchaseBill from './pages/PurchaseBill';
 import Payment from './pages/Payment';
@@ -136,17 +135,6 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Profile />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Settings />
                 </Layout>
               </ProtectedRoute>
             }

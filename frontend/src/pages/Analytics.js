@@ -14,6 +14,9 @@ const Analytics = () => {
     const [filterPartner, setFilterPartner] = useState('all');
     const [filterStatus, setFilterStatus] = useState('active');
     const [searchTerm, setSearchTerm] = useState('');
+    const [notification, setNotification] = useState({ show: false, message: '', type: '' });
+    const [showArchiveModal, setShowArchiveModal] = useState(false);
+    const [eventToArchive, setEventToArchive] = useState(null);
 
     // Form state matching database schema
     const [formData, setFormData] = useState({
@@ -29,6 +32,13 @@ const Analytics = () => {
         status: 'active'
     });
 
+    const showNotification = (message, type = 'success') => {
+        setNotification({ show: true, message, type });
+        setTimeout(() => {
+            setNotification({ show: false, message: '', type: '' });
+        }, 3000);
+    };
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -43,27 +53,52 @@ const Analytics = () => {
             ]);
 
             setAnalytics(analyticsResponse.data.data || []);
-            setProducts(productsResponse.data.data || []);
-            setUsers(contactsResponse.data.data || []);
+            // Filter only active products
+            setProducts((productsResponse.data.data || []).filter(p => p.status === 'active'));
+            // Store all active contacts
+            setUsers((contactsResponse.data.data || []).filter(c => c.status === 'active'));
         } catch (error) {
             console.error('Error fetching data:', error);
-            alert('Failed to fetch data');
+            showNotification('Failed to fetch data', 'error');
         } finally {
             setLoading(false);
         }
     };
 
+    // Filter partners based on selected partner_tag
+    // partner_tag: 'customer' matches type: 'customer'
+    // partner_tag: 'supplier' matches type: 'vendor'
+    const filteredPartners = users.filter(user => {
+        if (formData.partner_tag === 'customer') {
+            return user.type === 'customer';
+        } else if (formData.partner_tag === 'supplier') {
+            return user.type === 'vendor';
+        }
+        return true;
+    });
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
 
-        // If product is selected, auto-fill category
+        // If partner_tag changes, reset partner_id
+        if (name === 'partner_tag') {
+            setFormData(prev => ({
+                ...prev,
+                partner_tag: value,
+                partner_id: '' // Reset partner selection
+            }));
+            return;
+        }
+
+        // If product is selected, auto-fill category and unit_price
         if (name === 'product_id') {
             const selectedProduct = products.find(p => p.id === parseInt(value));
             if (selectedProduct) {
                 setFormData(prev => ({
                     ...prev,
                     product_id: value,
-                    product_category: selectedProduct.category
+                    product_category: selectedProduct.category || '',
+                    unit_price: (selectedProduct.unit_price || 0).toString()
                 }));
                 return;
             }
@@ -75,34 +110,50 @@ const Analytics = () => {
         }));
     };
 
-    const calculateProfit = () => {
-        const product = products.find(p => p.id === parseInt(formData.product_id));
-        if (product && formData.no_of_units) {
-            const units = parseInt(formData.no_of_units);
-            const profit = (product.sale_price - product.purchase_price) * units;
-            const profitMargin = ((product.sale_price - product.purchase_price) / product.sale_price) * 100;
-
-            setFormData(prev => ({
-                ...prev,
-                unit_price: product.sale_price.toString(),
-                profit: profit.toFixed(2),
-                profit_margin_percentage: profitMargin.toFixed(2)
-            }));
-        }
-    };
-
+    // Auto-calculate profit when product or units change
     useEffect(() => {
         if (formData.product_id && formData.no_of_units) {
-            calculateProfit();
+            const product = products.find(p => p.id === parseInt(formData.product_id));
+            if (product) {
+                const units = parseInt(formData.no_of_units) || 0;
+                const unitPrice = parseFloat(product.unit_price) || 0;
+                const purchasePrice = parseFloat(product.purchase_price) || 0;
+                
+                // Calculate profit: (sale_price - purchase_price) * units
+                const profit = (unitPrice - purchasePrice) * units;
+                // Calculate profit margin: ((sale_price - purchase_price) / sale_price) * 100
+                const profitMargin = unitPrice > 0 ? ((unitPrice - purchasePrice) / unitPrice) * 100 : 0;
+                
+                setFormData(prev => ({
+                    ...prev,
+                    unit_price: unitPrice.toString(),
+                    product_category: product.category || '',
+                    profit: profit.toFixed(2),
+                    profit_margin_percentage: profitMargin.toFixed(2)
+                }));
+            }
+        } else {
+            // Reset profit fields if product or units not selected
+            setFormData(prev => ({
+                ...prev,
+                profit: '',
+                profit_margin_percentage: ''
+            }));
         }
-    }, [formData.product_id, formData.no_of_units]);
+    }, [formData.product_id, formData.no_of_units, products]);
 
     const handleCreateEvent = async (e) => {
         e.preventDefault();
 
-        // Validation
+        // Validation - profit fields are auto-calculated, so only validate required input fields
         if (!formData.event_name || !formData.partner_id || !formData.product_id || !formData.no_of_units) {
-            alert('Please fill in all required fields');
+            showNotification('Please fill in all required fields', 'error');
+            return;
+        }
+
+        // Ensure profit is calculated
+        if (!formData.profit || !formData.profit_margin_percentage) {
+            showNotification('Please select a product to calculate profit', 'error');
             return;
         }
 
@@ -121,14 +172,14 @@ const Analytics = () => {
             });
 
             if (response.data.success) {
-                alert('Analytics event created successfully!');
+                showNotification('Analytics event created successfully!', 'success');
                 await fetchData(); // Refresh the list
                 setShowCreateModal(false);
                 resetForm();
             }
         } catch (error) {
             console.error('Error creating analytics event:', error);
-            alert(error.response?.data?.message || 'Failed to create analytics event');
+            showNotification(error.response?.data?.message || 'Failed to create analytics event', 'error');
         }
     };
 
@@ -150,7 +201,7 @@ const Analytics = () => {
             });
 
             if (response.data.success) {
-                alert('Analytics event updated successfully!');
+                showNotification('Analytics event updated successfully!', 'success');
                 await fetchData(); // Refresh the list
                 setShowEditModal(false);
                 setSelectedEvent(null);
@@ -158,35 +209,30 @@ const Analytics = () => {
             }
         } catch (error) {
             console.error('Error updating analytics event:', error);
-            alert(error.response?.data?.message || 'Failed to update analytics event');
+            showNotification(error.response?.data?.message || 'Failed to update analytics event', 'error');
         }
     };
 
-    const handleDeleteEvent = async (id) => {
-        if (window.confirm('Are you sure you want to delete this analytics event?')) {
-            try {
-                const response = await analyticsAPI.delete(id);
-                if (response.data.success) {
-                    alert('Analytics event deleted successfully!');
-                    await fetchData(); // Refresh the list
-                }
-            } catch (error) {
-                console.error('Error deleting analytics event:', error);
-                alert(error.response?.data?.message || 'Failed to delete analytics event');
-            }
-        }
+    const handleArchiveEvent = (id) => {
+        setEventToArchive(id);
+        setShowArchiveModal(true);
     };
 
-    const handleArchiveEvent = async (id) => {
+    const confirmArchiveEvent = async () => {
+        if (!eventToArchive) return;
+
         try {
-            const response = await analyticsAPI.update(id, { status: 'archived' });
+            const response = await analyticsAPI.update(eventToArchive, { status: 'archived' });
             if (response.data.success) {
-                alert('Analytics event archived successfully!');
+                showNotification('Analytics event archived successfully!', 'success');
                 await fetchData(); // Refresh the list
             }
         } catch (error) {
             console.error('Error archiving analytics event:', error);
-            alert(error.response?.data?.message || 'Failed to archive analytics event');
+            showNotification(error.response?.data?.message || 'Failed to archive analytics event', 'error');
+        } finally {
+            setShowArchiveModal(false);
+            setEventToArchive(null);
         }
     };
 
@@ -194,12 +240,12 @@ const Analytics = () => {
         try {
             const response = await analyticsAPI.update(id, { status: 'active' });
             if (response.data.success) {
-                alert('Analytics event activated successfully!');
+                showNotification('Analytics event activated successfully!', 'success');
                 await fetchData(); // Refresh the list
             }
         } catch (error) {
             console.error('Error activating analytics event:', error);
-            alert(error.response?.data?.message || 'Failed to activate analytics event');
+            showNotification(error.response?.data?.message || 'Failed to activate analytics event', 'error');
         }
     };
 
@@ -456,12 +502,6 @@ const Analytics = () => {
                                                 Activate
                                             </button>
                                         )}
-                                        <button
-                                            onClick={() => handleDeleteEvent(event.id)}
-                                            className="flex-1 text-sm text-red-600 hover:text-red-900 font-medium"
-                                        >
-                                            Delete
-                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -552,14 +592,18 @@ const Analytics = () => {
                                         className="input-field"
                                         required
                                     >
-                                        <option value="">Select a partner</option>
-                                        {users.map(user => (
-                                            <option key={user.id} value={user.id}>
-                                                {user.name}
+                                        <option value="">Select a {formData.partner_tag === 'supplier' ? 'vendor' : 'customer'}</option>
+                                        {filteredPartners.map(partner => (
+                                            <option key={partner.id} value={partner.id}>
+                                                {partner.name} {partner.email ? `(${partner.email})` : ''}
                                             </option>
                                         ))}
                                     </select>
-
+                                    {filteredPartners.length === 0 && (
+                                        <p className="text-xs text-yellow-600 mt-1">
+                                            No {formData.partner_tag === 'supplier' ? 'vendors' : 'customers'} found. Please add one in Contacts first.
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Product */}
@@ -577,7 +621,7 @@ const Analytics = () => {
                                         <option value="">Select a product</option>
                                         {products.map(product => (
                                             <option key={product.id} value={product.id}>
-                                                {product.name} - {product.category} (₹{product.sale_price})
+                                                {product.name} - {product.category} (₹{product.unit_price || 0})
                                             </option>
                                         ))}
                                     </select>
@@ -644,6 +688,7 @@ const Analytics = () => {
                                         value={formData.profit}
                                         className="input-field bg-gray-50"
                                         step="0.01"
+                                        placeholder="Auto-calculated from product"
                                         readOnly
                                     />
 
@@ -660,6 +705,7 @@ const Analytics = () => {
                                         value={formData.profit_margin_percentage}
                                         className="input-field bg-gray-50"
                                         step="0.01"
+                                        placeholder="Auto-calculated from product"
                                         readOnly
                                     />
 
@@ -782,13 +828,18 @@ const Analytics = () => {
                                         className="input-field"
                                         required
                                     >
-                                        <option value="">Select a partner</option>
-                                        {users.map(user => (
-                                            <option key={user.id} value={user.id}>
-                                                {user.name}
+                                        <option value="">Select a {formData.partner_tag === 'supplier' ? 'vendor' : 'customer'}</option>
+                                        {filteredPartners.map(partner => (
+                                            <option key={partner.id} value={partner.id}>
+                                                {partner.name} {partner.email ? `(${partner.email})` : ''}
                                             </option>
                                         ))}
                                     </select>
+                                    {filteredPartners.length === 0 && (
+                                        <p className="text-xs text-yellow-600 mt-1">
+                                            No {formData.partner_tag === 'supplier' ? 'vendors' : 'customers'} found. Please add one in Contacts first.
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div>
@@ -805,7 +856,7 @@ const Analytics = () => {
                                         <option value="">Select a product</option>
                                         {products.map(product => (
                                             <option key={product.id} value={product.id}>
-                                                {product.name} - {product.category} (₹{product.sale_price})
+                                                {product.name} - {product.category} (₹{product.unit_price || 0})
                                             </option>
                                         ))}
                                     </select>
@@ -863,6 +914,7 @@ const Analytics = () => {
                                         value={formData.profit}
                                         className="input-field bg-gray-50"
                                         step="0.01"
+                                        placeholder="Auto-calculated from product"
                                         readOnly
                                     />
                                 </div>
@@ -877,6 +929,7 @@ const Analytics = () => {
                                         value={formData.profit_margin_percentage}
                                         className="input-field bg-gray-50"
                                         step="0.01"
+                                        placeholder="Auto-calculated from product"
                                         readOnly
                                     />
                                 </div>
@@ -913,6 +966,88 @@ const Analytics = () => {
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Archive Confirmation Modal */}
+            {showArchiveModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-md w-full p-6">
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                                <svg className="w-6 h-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900">Archive Analytics Event</h3>
+                                <p className="text-sm text-gray-600 mt-1">Are you sure you want to archive this analytics event? You can restore it later.</p>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowArchiveModal(false);
+                                    setEventToArchive(null);
+                                }}
+                                className="btn-secondary"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmArchiveEvent}
+                                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                            >
+                                Archive
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Notification Toast */}
+            {notification.show && (
+                <div className="fixed top-4 right-4 z-50 animate-slide-in">
+                    <div className={`rounded-lg shadow-lg p-4 max-w-md ${
+                        notification.type === 'success' ? 'bg-green-50 border border-green-200' :
+                        notification.type === 'error' ? 'bg-red-50 border border-red-200' :
+                        'bg-blue-50 border border-blue-200'
+                    }`}>
+                        <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0">
+                                {notification.type === 'success' ? (
+                                    <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                ) : notification.type === 'error' ? (
+                                    <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                ) : (
+                                    <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <p className={`text-sm font-medium ${
+                                    notification.type === 'success' ? 'text-green-800' :
+                                    notification.type === 'error' ? 'text-red-800' :
+                                    'text-blue-800'
+                                }`}>
+                                    {notification.message}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setNotification({ show: false, message: '', type: '' })}
+                                className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </div>

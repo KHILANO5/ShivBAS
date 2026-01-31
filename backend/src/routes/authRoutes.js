@@ -41,6 +41,14 @@ router.post('/refresh-token', authController.refreshToken);
 // GET /api/auth/me
 router.get('/me', authenticate, authController.getCurrentUser);
 
+// Update Profile
+// PUT /api/auth/profile
+router.put('/profile', authenticate, authController.updateProfile);
+
+// Change Password
+// POST /api/auth/change-password
+router.post('/change-password', authenticate, authController.changePassword);
+
 // Logout
 // POST /api/auth/logout
 router.post('/logout', authenticate, authController.logout);

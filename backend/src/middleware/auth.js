@@ -29,7 +29,7 @@ const authenticate = async (req, res, next) => {
 
     // Verify user exists in database
     const [users] = await pool.query(
-      'SELECT id as user_id, login_id, email, name, role FROM users WHERE id = ?',
+      'SELECT id, login_id, email, name, role FROM users WHERE id = ?',
       [decoded.userId]
     );
 
@@ -40,7 +40,11 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    req.user = users[0];
+    // Add userId for consistency with token payload
+    req.user = {
+      ...users[0],
+      userId: users[0].id
+    };
     next();
   } catch (error) {
     console.error('Authentication error:', error);

@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { authAPI } from '../services/api';
 
 const Profile = () => {
-    const { user } = useAuth();
+    const { user, setUser } = useAuth();
     const [loading, setLoading] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
+    const [profileLoading, setProfileLoading] = useState(true);
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     // Profile form data
     const [profileData, setProfileData] = useState({
@@ -21,6 +26,31 @@ const Profile = () => {
         new_password: '',
         confirm_password: ''
     });
+
+    useEffect(() => {
+        fetchProfileData();
+    }, []);
+
+    const fetchProfileData = async () => {
+        setProfileLoading(true);
+        try {
+            const response = await authAPI.getCurrentUser();
+            if (response.data.success) {
+                const userData = response.data.data.user;
+                // Update context with fresh data
+                localStorage.setItem('user', JSON.stringify(userData));
+                setProfileData({
+                    name: userData.name || '',
+                    email: userData.email || '',
+                    login_id: userData.login_id || ''
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+        } finally {
+            setProfileLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (user) {
@@ -70,16 +100,23 @@ const Profile = () => {
 
         setLoading(true);
         try {
-            // Mock API call - replace with actual API
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Update profile via real API
+            const response = await authAPI.updateProfile({
+                name: profileData.name,
+                email: profileData.email,
+                phone: profileData.phone,
+                bio: profileData.bio
+            });
 
-            // Update would happen here
-            setMessage({ type: 'success', text: 'Profile updated successfully!' });
-            setShowEditModal(false);
-
-            // In real implementation, update the user context
+            if (response.data.success) {
+                setMessage({ type: 'success', text: 'Profile updated successfully!' });
+                setShowEditModal(false);
+                // Update local user context if needed
+            } else {
+                setMessage({ type: 'error', text: response.data.error || 'Failed to update profile' });
+            }
         } catch (error) {
-            setMessage({ type: 'error', text: 'Failed to update profile. Please try again.' });
+            setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to update profile. Please try again.' });
         } finally {
             setLoading(false);
         }
@@ -100,25 +137,71 @@ const Profile = () => {
             return;
         }
 
+        // Check password strength
+        if (!/[A-Z]/.test(passwordData.new_password)) {
+            setMessage({ type: 'error', text: 'Password must contain at least one uppercase letter' });
+            return;
+        }
+
+        if (!/[a-z]/.test(passwordData.new_password)) {
+            setMessage({ type: 'error', text: 'Password must contain at least one lowercase letter' });
+            return;
+        }
+
+        if (!/[0-9]/.test(passwordData.new_password)) {
+            setMessage({ type: 'error', text: 'Password must contain at least one number' });
+            return;
+        }
+
+        if (!/[!@#$%^&*]/.test(passwordData.new_password)) {
+            setMessage({ type: 'error', text: 'Password must contain at least one special character (!@#$%^&*)' });
+            return;
+        }
+
         if (passwordData.new_password !== passwordData.confirm_password) {
             setMessage({ type: 'error', text: 'New passwords do not match' });
             return;
         }
 
+        if (passwordData.current_password === passwordData.new_password) {
+            setMessage({ type: 'error', text: 'New password must be different from current password' });
+            return;
+        }
+
         setLoading(true);
         try {
-            // Mock API call - replace with actual API
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            setMessage({ type: 'success', text: 'Password changed successfully!' });
-            setShowPasswordModal(false);
-            setPasswordData({
-                current_password: '',
-                new_password: '',
-                confirm_password: ''
+            console.log('Sending password change request...'); // Debug log
+            // Change password via real API
+            const response = await authAPI.changePassword({
+                current_password: passwordData.current_password,
+                new_password: passwordData.new_password
             });
+
+            console.log('Password change response:', response.data); // Debug log
+
+            if (response.data.success) {
+                setMessage({ type: 'success', text: 'Password changed successfully!' });
+                // Wait a bit to show success message before closing
+                setTimeout(() => {
+                    setShowPasswordModal(false);
+                    setPasswordData({
+                        current_password: '',
+                        new_password: '',
+                        confirm_password: ''
+                    });
+                    // Reset visibility toggles
+                    setShowCurrentPassword(false);
+                    setShowNewPassword(false);
+                    setShowConfirmPassword(false);
+                    setMessage({ type: '', text: '' }); // Clear message
+                }, 2000);
+            } else {
+                setMessage({ type: 'error', text: response.data.error || 'Failed to change password' });
+            }
         } catch (error) {
-            setMessage({ type: 'error', text: 'Failed to change password. Please check your current password.' });
+            console.error('Password change error:', error); // Debug log
+            const errorMsg = error.response?.data?.error || 'Failed to change password. Please try again.';
+            setMessage({ type: 'error', text: errorMsg });
         } finally {
             setLoading(false);
         }
@@ -399,34 +482,77 @@ const Profile = () => {
                                 </button>
                             </div>
 
+                            {/* Error/Success Message */}
+                            {message.text && (
+                                <div className={`p-4 rounded-lg mb-4 ${message.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                                    {message.text}
+                                </div>
+                            )}
+
                             <form onSubmit={handleChangePassword} className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Current Password <span className="text-red-500">*</span>
                                     </label>
-                                    <input
-                                        type="password"
-                                        name="current_password"
-                                        value={passwordData.current_password}
-                                        onChange={handlePasswordChange}
-                                        className="input-field"
-                                        required
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type={showCurrentPassword ? "text" : "password"}
+                                            name="current_password"
+                                            value={passwordData.current_password}
+                                            onChange={handlePasswordChange}
+                                            className="input-field pr-10"
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                        >
+                                            {showCurrentPassword ? (
+                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                                </svg>
+                                            ) : (
+                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         New Password <span className="text-red-500">*</span>
                                     </label>
-                                    <input
-                                        type="password"
-                                        name="new_password"
-                                        value={passwordData.new_password}
-                                        onChange={handlePasswordChange}
-                                        className="input-field"
-                                        required
-                                        minLength={8}
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type={showNewPassword ? "text" : "password"}
+                                            name="new_password"
+                                            value={passwordData.new_password}
+                                            onChange={handlePasswordChange}
+                                            className="input-field pr-10"
+                                            required
+                                            minLength={8}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowNewPassword(!showNewPassword)}
+                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                        >
+                                            {showNewPassword ? (
+                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                                </svg>
+                                            ) : (
+                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    </div>
                                     <p className="mt-1 text-xs text-gray-500">Must be at least 8 characters long</p>
                                 </div>
 
@@ -434,14 +560,32 @@ const Profile = () => {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Confirm New Password <span className="text-red-500">*</span>
                                     </label>
-                                    <input
-                                        type="password"
-                                        name="confirm_password"
-                                        value={passwordData.confirm_password}
-                                        onChange={handlePasswordChange}
-                                        className="input-field"
-                                        required
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type={showConfirmPassword ? "text" : "password"}
+                                            name="confirm_password"
+                                            value={passwordData.confirm_password}
+                                            onChange={handlePasswordChange}
+                                            className="input-field pr-10"
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                        >
+                                            {showConfirmPassword ? (
+                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                                </svg>
+                                            ) : (
+                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">

@@ -22,9 +22,10 @@ const SignUp = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+        const processedValue = name === 'email' ? value.toLowerCase() : value;
         setFormData({
             ...formData,
-            [name]: value,
+            [name]: processedValue,
         });
         // Clear error for this field
         if (errors[name]) {
@@ -144,33 +145,31 @@ const SignUp = () => {
                 password: formData.password
             });
 
-            if (response.success) {
+            if (response.data.success) {
                 // Show success message
-                setSuccessMessage('Account created successfully! Redirecting to login...');
+                setSuccessMessage('Account created successfully! Redirecting to dashboard...');
 
-                // Auto-login after 2 seconds
-                setTimeout(async () => {
-                    const loginResult = await login({
-                        login_id: formData.login_id,
-                        password: formData.password
-                    });
+                // Store user data and token
+                const { user, accessToken } = response.data.data;
+                localStorage.setItem('token', accessToken);
+                localStorage.setItem('user', JSON.stringify(user));
 
-                    if (loginResult.success) {
-                        navigate('/dashboard');
-                    } else {
-                        navigate('/login');
-                    }
-                }, 2000);
+                // Auto-login and redirect after 1.5 seconds
+                setTimeout(() => {
+                    login({ login_id: formData.login_id, password: formData.password });
+                    navigate('/dashboard');
+                }, 1500);
             } else {
                 setErrors({
-                    submit: response.message || 'Registration failed. Please try again.'
+                    submit: response.data.error || 'Registration failed. Please try again.'
                 });
             }
 
         } catch (error) {
             console.error('Signup error:', error);
+            const errorMsg = error.response?.data?.error || 'Registration failed. Please try again.';
             setErrors({
-                submit: error.response?.data?.message || 'Registration failed. Please try again.'
+                submit: errorMsg
             });
         } finally {
             setLoading(false);

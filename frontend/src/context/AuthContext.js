@@ -32,10 +32,55 @@ export const AuthProvider = ({ children }) => {
                 return { success: true, user };
             }
             
-            return { success: false, error: 'Login failed' };
+            return { success: false, error: 'Login failed. Please try again.' };
         } catch (error) {
-            const errorMessage = error.response?.data?.error || 'Login failed';
-            return { success: false, error: errorMessage };
+            console.error('Login error:', error);
+            
+            // Handle different error scenarios
+            if (error.response) {
+                const status = error.response.status;
+                const errorData = error.response.data;
+                
+                // Specific error messages based on status code
+                if (status === 401) {
+                    return { 
+                        success: false, 
+                        error: errorData.error || 'Invalid login credentials. Please check your Login ID and password.' 
+                    };
+                } else if (status === 400) {
+                    return { 
+                        success: false, 
+                        error: errorData.error || 'Invalid input. Please check your Login ID and password.' 
+                    };
+                } else if (status === 403) {
+                    return { 
+                        success: false, 
+                        error: 'Your account has been suspended. Please contact the administrator.' 
+                    };
+                } else if (status === 500) {
+                    return { 
+                        success: false, 
+                        error: 'Server error. Please try again later.' 
+                    };
+                } else {
+                    return { 
+                        success: false, 
+                        error: errorData.error || 'Login failed. Please try again.' 
+                    };
+                }
+            } else if (error.request) {
+                // Network error - no response received
+                return { 
+                    success: false, 
+                    error: 'Unable to connect to the server. Please check your internet connection.' 
+                };
+            } else {
+                // Other errors
+                return { 
+                    success: false, 
+                    error: 'An unexpected error occurred. Please try again.' 
+                };
+            }
         }
     };
 

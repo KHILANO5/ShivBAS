@@ -17,12 +17,17 @@ const getDashboardSummary = async (req, res) => {
       'SELECT COUNT(*) as total, COALESCE(SUM(budgeted_amount), 0) as total_amount FROM budgets'
     );
 
-    // Total Invoices
+    // Total Analytics/Events
+    const [analyticsStats] = await pool.query(
+      'SELECT COUNT(*) as total FROM analytics WHERE status = "active"'
+    );
+
+    // Total Invoices (Income)
     const [invoiceStats] = await pool.query(
       'SELECT COUNT(*) as total, COALESCE(SUM(total_amount), 0) as total_amount FROM customer_invoices'
     );
 
-    // Total Bills
+    // Total Bills (Expenses)
     const [billStats] = await pool.query(
       'SELECT COUNT(*) as total, COALESCE(SUM(total_amount), 0) as total_amount FROM vendor_bills'
     );
@@ -35,6 +40,10 @@ const getDashboardSummary = async (req, res) => {
     res.json({
       success: true,
       data: {
+        total_budgets: parseInt(budgetStats[0].total),
+        active_events: parseInt(analyticsStats[0].total),
+        total_income: parseFloat(invoiceStats[0].total_amount),
+        total_expenses: parseFloat(billStats[0].total_amount),
         budgets: {
           total: parseInt(budgetStats[0].total),
           total_amount: parseFloat(budgetStats[0].total_amount)

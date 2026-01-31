@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { mockAPI } from '../services/mockAPI';
+import { revisedBudgetsAPI, budgetsAPI } from '../services/api';
 
 const RevisedBudget = () => {
     const { isAdmin } = useAuth();
@@ -31,12 +31,12 @@ const RevisedBudget = () => {
         setLoading(true);
         try {
             const [revisedRes, budgetsRes] = await Promise.all([
-                mockAPI.getRevisedBudgets(),
-                mockAPI.getBudgets()
+                revisedBudgetsAPI.getAll(),
+                budgetsAPI.getAll()
             ]);
 
-            setRevisedBudgets(revisedRes.data.data);
-            setOriginalBudgets(budgetsRes.data.data.budgets);
+            setRevisedBudgets(revisedRes.data.data || []);
+            setOriginalBudgets(budgetsRes.data.data || []);
         } catch (error) {
             console.error('Error fetching data:', error);
         } finally {
@@ -85,9 +85,9 @@ const RevisedBudget = () => {
 
         try {
             if (selectedRevision) {
-                await mockAPI.updateRevisedBudget(selectedRevision.id, payload);
+                await revisedBudgetsAPI.update(selectedRevision.id, payload);
             } else {
-                await mockAPI.createRevisedBudget(payload);
+                await revisedBudgetsAPI.create(payload);
             }
             fetchData();
             closeModal();
@@ -100,7 +100,7 @@ const RevisedBudget = () => {
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this Revision?')) {
             try {
-                await mockAPI.deleteRevisedBudget(id);
+                await revisedBudgetsAPI.delete(id);
                 fetchData();
             } catch (error) {
                 console.error('Error deleting Revision:', error);

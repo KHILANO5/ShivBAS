@@ -28,10 +28,16 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            // Token expired or invalid
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/login';
+            // Don't redirect if it's a login or register endpoint (user is trying to authenticate)
+            const isAuthEndpoint = error.config?.url?.includes('/auth/login') || 
+                                   error.config?.url?.includes('/auth/register');
+            
+            if (!isAuthEndpoint) {
+                // Token expired or invalid on protected routes
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }
@@ -43,6 +49,8 @@ export const authAPI = {
     register: (userData) => api.post('/auth/register', userData),
     logout: () => api.post('/auth/logout'),
     getCurrentUser: () => api.get('/auth/me'),
+    updateProfile: (data) => api.put('/auth/profile', data),
+    changePassword: (data) => api.post('/auth/change-password', data),
     forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
     resetPassword: (data) => api.post('/auth/reset-password', data),
 };
@@ -61,6 +69,7 @@ export const productsAPI = {
     getAll: (params) => api.get('/products', { params }),
     getById: (id) => api.get(`/products/${id}`),
     create: (data) => api.post('/products', data),
+    update: (id, data) => api.put(`/products/${id}`, data),
 };
 
 // Contacts APIs
@@ -86,6 +95,15 @@ export const budgetsAPI = {
     delete: (id) => api.delete(`/budgets/${id}`),
     getRevisions: (id) => api.get(`/budgets/${id}/revisions`),
     getAlerts: () => api.get('/budgets/alerts'),
+};
+
+// Revised Budgets APIs
+export const revisedBudgetsAPI = {
+    getAll: (params) => api.get('/revised-budgets', { params }),
+    getById: (id) => api.get(`/revised-budgets/${id}`),
+    create: (data) => api.post('/revised-budgets', data),
+    update: (id, data) => api.put(`/revised-budgets/${id}`, data),
+    delete: (id) => api.delete(`/revised-budgets/${id}`),
 };
 
 // Transactions APIs

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { dashboardAPI, budgetsAPI, analyticsAPI } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
     const { user, isAdmin } = useAuth();
+    const navigate = useNavigate();
     const [summary, setSummary] = useState(null);
     const [budgets, setBudgets] = useState([]);
     const [analytics, setAnalytics] = useState([]);
@@ -64,21 +66,18 @@ const Dashboard = () => {
             {/* Header */}
             <header className="bg-white shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-                            <p className="text-sm text-gray-600 mt-1">
-                                Welcome back, {user?.name} {isAdmin && <span className="text-primary-600">(Admin)</span>}
-                            </p>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                            <button className="btn-secondary text-sm">
-                                <svg className="w-4 h-4 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                </svg>
-                                Notifications
-                            </button>
-                        </div>
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+                        <p className="text-sm text-gray-600 mt-1">
+                            Welcome back, {user?.name} {isAdmin && (
+                                <span 
+                                    className="text-primary-600 cursor-pointer hover:text-primary-700 hover:underline" 
+                                    onClick={() => navigate('/profile')}
+                                >
+                                    (Admin)
+                                </span>
+                            )}
+                        </p>
                     </div>
                 </div>
             </header>
@@ -159,16 +158,8 @@ const Dashboard = () => {
 
                 {/* Budgets Table */}
                 <div className="card mb-8">
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="mb-6">
                         <h2 className="text-xl font-bold text-gray-900">Budget Overview</h2>
-                        {isAdmin && (
-                            <button className="btn-primary text-sm">
-                                <svg className="w-4 h-4 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                                Create Budget
-                            </button>
-                        )}
                     </div>
 
                     {budgets.length === 0 ? (
@@ -255,16 +246,8 @@ const Dashboard = () => {
 
                 {/* Analytics Events */}
                 <div className="card">
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="mb-6">
                         <h2 className="text-xl font-bold text-gray-900">Recent Events</h2>
-                        {isAdmin && (
-                            <button className="btn-primary text-sm">
-                                <svg className="w-4 h-4 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                                Create Event
-                            </button>
-                        )}
                     </div>
 
                     {analytics.length === 0 ? (
