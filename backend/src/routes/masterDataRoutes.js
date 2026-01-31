@@ -21,6 +21,8 @@ router.get('/products', authenticate, masterDataController.getProducts);
 // Contacts Routes
 router.post('/contacts', authenticate, requireAdmin, masterDataController.createContact);
 router.get('/contacts', authenticate, masterDataController.getContacts);
+router.put('/contacts/:id', authenticate, requireAdmin, masterDataController.updateContact);
+router.delete('/contacts/:id', authenticate, requireAdmin, masterDataController.deleteContact);
 
 // Partners Routes
 router.get('/partners', authenticate, masterDataController.getPartners);

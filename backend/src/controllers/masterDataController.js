@@ -325,6 +325,142 @@ const getContacts = async (req, res) => {
   }
 };
 
+// Update Contact
+// PUT /api/contacts/:id
+const updateContact = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, type, email, phone, linked_user_id, status } = req.body;
+
+    // Check if contact exists
+    const [existing] = await pool.query(
+      'SELECT id FROM contacts WHERE id = ?',
+      [id]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contact not found'
+      });
+    }
+
+    // Build dynamic update query
+    const updates = [];
+    const params = [];
+
+    if (name !== undefined) {
+      updates.push('name = ?');
+      params.push(name);
+    }
+    if (type !== undefined) {
+      if (!['customer', 'vendor', 'partner'].includes(type)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Type must be customer, vendor, or partner'
+        });
+      }
+      updates.push('type = ?');
+      params.push(type);
+    }
+    if (email !== undefined) {
+      updates.push('email = ?');
+      params.push(email);
+    }
+    if (phone !== undefined) {
+      updates.push('phone = ?');
+      params.push(phone);
+    }
+    if (linked_user_id !== undefined) {
+      updates.push('linked_user_id = ?');
+      params.push(linked_user_id);
+    }
+    if (status !== undefined) {
+      if (!['active', 'archived'].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Status must be active or archived'
+        });
+      }
+      updates.push('status = ?');
+      params.push(status);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No fields to update'
+      });
+    }
+
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    params.push(id);
+
+    await pool.query(
+      `UPDATE contacts SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+
+    res.json({
+      success: true,
+      message: 'Contact updated successfully'
+    });
+  } catch (error) {
+    console.error('Update contact error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update contact'
+    });
+  }
+};
+
+// Delete Contact
+// DELETE /api/contacts/:id
+const deleteContact = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if contact exists
+    const [existing] = await pool.query(
+      'SELECT id FROM contacts WHERE id = ?',
+      [id]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contact not found'
+      });
+    }
+
+    // Check if contact is used in transactions
+    const [transactions] = await pool.query(
+      'SELECT id FROM transactions WHERE contact_id = ? LIMIT 1',
+      [id]
+    );
+
+    if (transactions.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot delete contact that is used in transactions. Consider archiving instead.'
+      });
+    }
+
+    await pool.query('DELETE FROM contacts WHERE id = ?', [id]);
+
+    res.json({
+      success: true,
+      message: 'Contact deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete contact error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete contact'
+    });
+  }
+};
+
 // ============================================================================
 // PARTNERS
 // ============================================================================
@@ -369,5 +505,7 @@ module.exports = {
   getProducts,
   createContact,
   getContacts,
+  updateContact,
+  deleteContact,
   getPartners
 };
