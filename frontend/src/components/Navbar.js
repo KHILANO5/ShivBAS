@@ -32,8 +32,15 @@ const Navbar = () => {
                 { label: 'Contact', path: '/contacts' },
                 { label: 'Product', path: '/products' },
                 { label: 'Analytics', path: '/analytics' },
-                { label: 'Auto Analytic Model', path: '/auto-analytics' },
-                { label: 'Budget', path: '/budgets' }
+                { label: 'Auto Analytic Model', path: '/auto-analytics' }
+            ]
+        },
+        budget: {
+            title: 'Budgets',
+            items: [
+                { label: 'Budget List', path: '/budgets' },
+                { label: 'Revised Budget', path: '/revised-budgets' },
+                { label: 'Budget Graph', path: '/budget-graph' }
             ]
         },
         purchase: {
