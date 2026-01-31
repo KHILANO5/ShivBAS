@@ -6,6 +6,10 @@ import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import Dashboard from './pages/Dashboard';
 import Budgets from './pages/Budgets';
+import RevisedBudget from './pages/RevisedBudget';
+import BudgetGraph from './pages/BudgetGraph';
+
+
 import Analytics from './pages/Analytics';
 import Invoices from './pages/Invoices';
 import Products from './pages/Products';
@@ -51,6 +55,28 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Budgets />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/revised-budgets"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RevisedBudget />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/budget-graph"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <BudgetGraph />
                 </Layout>
               </ProtectedRoute>
             }

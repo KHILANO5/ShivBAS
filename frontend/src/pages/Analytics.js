@@ -365,14 +365,14 @@ const Analytics = () => {
                                         <h3 className="font-bold text-lg text-gray-900">{event.event_name}</h3>
                                         <div className="flex items-center gap-2 mt-2">
                                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${event.partner_tag === 'customer'
-                                                    ? 'bg-blue-100 text-blue-800'
-                                                    : 'bg-purple-100 text-purple-800'
+                                                ? 'bg-blue-100 text-blue-800'
+                                                : 'bg-purple-100 text-purple-800'
                                                 }`}>
                                                 {event.partner_tag}
                                             </span>
                                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${event.status === 'active'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : 'bg-gray-100 text-gray-800'
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-gray-100 text-gray-800'
                                                 }`}>
                                                 {event.status}
                                             </span>
@@ -489,7 +489,7 @@ const Analytics = () => {
                                         placeholder="e.g., Expo 2026, Summer Sale"
                                         required
                                     />
-                                    <p className="mt-1 text-xs text-gray-500">VARCHAR(255) - Name of the event</p>
+
                                 </div>
 
                                 {/* Partner Tag */}
@@ -521,7 +521,7 @@ const Analytics = () => {
                                             <span className="text-sm">Supplier</span>
                                         </label>
                                     </div>
-                                    <p className="mt-1 text-xs text-gray-500">ENUM('supplier', 'customer')</p>
+
                                 </div>
 
                                 {/* Partner */}
@@ -543,7 +543,7 @@ const Analytics = () => {
                                             </option>
                                         ))}
                                     </select>
-                                    <p className="mt-1 text-xs text-gray-500">INT - FK to users table</p>
+
                                 </div>
 
                                 {/* Product */}
@@ -565,7 +565,7 @@ const Analytics = () => {
                                             </option>
                                         ))}
                                     </select>
-                                    <p className="mt-1 text-xs text-gray-500">INT - FK to products table</p>
+
                                 </div>
 
                                 {/* Product Category (Auto-filled) */}
@@ -580,7 +580,7 @@ const Analytics = () => {
                                         className="input-field bg-gray-50"
                                         readOnly
                                     />
-                                    <p className="mt-1 text-xs text-gray-500">VARCHAR(100) - Auto-filled from product</p>
+
                                 </div>
 
                                 {/* Number of Units */}
@@ -598,7 +598,7 @@ const Analytics = () => {
                                         min="1"
                                         required
                                     />
-                                    <p className="mt-1 text-xs text-gray-500">INT - Number of units sold/purchased</p>
+
                                 </div>
 
                                 {/* Unit Price (Auto-calculated) */}
@@ -614,7 +614,7 @@ const Analytics = () => {
                                         step="0.01"
                                         readOnly
                                     />
-                                    <p className="mt-1 text-xs text-gray-500">DECIMAL(10,2) - Auto-filled from product</p>
+
                                 </div>
 
                                 {/* Profit (Auto-calculated) */}
@@ -630,9 +630,7 @@ const Analytics = () => {
                                         step="0.01"
                                         readOnly
                                     />
-                                    <p className="mt-1 text-xs text-gray-500">
-                                        DECIMAL(15,2) - Auto-calculated: (sale_price - purchase_price) × units
-                                    </p>
+
                                 </div>
 
                                 {/* Profit Margin (Auto-calculated) */}
@@ -648,9 +646,7 @@ const Analytics = () => {
                                         step="0.01"
                                         readOnly
                                     />
-                                    <p className="mt-1 text-xs text-gray-500">
-                                        DECIMAL(5,2) - Auto-calculated profit margin percentage
-                                    </p>
+
                                 </div>
 
                                 {/* Status */}
@@ -667,7 +663,7 @@ const Analytics = () => {
                                         <option value="active">Active</option>
                                         <option value="archived">Archived</option>
                                     </select>
-                                    <p className="mt-1 text-xs text-gray-500">ENUM('active', 'archived')</p>
+
                                 </div>
 
                                 {/* Form Actions */}

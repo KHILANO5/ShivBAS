@@ -464,7 +464,7 @@ const Products = () => {
                                         placeholder="e.g., Premium Wood, Steel Sheets"
                                         required
                                     />
-                                    <p className="mt-1 text-xs text-gray-500">VARCHAR(255) - Product name</p>
+
                                 </div>
 
                                 {/* Category */}
@@ -481,7 +481,7 @@ const Products = () => {
                                         placeholder="e.g., Raw Materials, Components, Textiles"
                                         required
                                     />
-                                    <p className="mt-1 text-xs text-gray-500">VARCHAR(100) - Used in auto-assignment rules</p>
+
                                 </div>
 
                                 {/* Unit Price */}
@@ -500,7 +500,7 @@ const Products = () => {
                                         step="0.01"
                                         required
                                     />
-                                    <p className="mt-1 text-xs text-gray-500">DECIMAL(10,2) - Price per unit</p>
+
                                 </div>
 
                                 {/* Tax Rate */}
@@ -519,7 +519,7 @@ const Products = () => {
                                         max="100"
                                         step="0.01"
                                     />
-                                    <p className="mt-1 text-xs text-gray-500">DECIMAL(5,2) - Tax percentage (e.g., 18.00 for 18%)</p>
+
                                 </div>
 
                                 {/* Price Preview */}
@@ -548,7 +548,7 @@ const Products = () => {
                                         <option value="active">Active</option>
                                         <option value="archived">Archived</option>
                                     </select>
-                                    <p className="mt-1 text-xs text-gray-500">ENUM('active', 'archived')</p>
+
                                 </div>
 
                                 {/* Form Actions */}

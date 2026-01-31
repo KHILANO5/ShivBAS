@@ -6,14 +6,7 @@ const Settings = () => {
     const [message, setMessage] = useState({ type: '', text: '' });
     const [loading, setLoading] = useState(false);
 
-    // Application Settings
-    const [appSettings, setAppSettings] = useState({
-        theme: 'light',
-        language: 'en',
-        timezone: 'Asia/Kolkata',
-        dateFormat: 'DD/MM/YYYY',
-        currency: 'INR'
-    });
+
 
     // Notification Settings
     const [notifications, setNotifications] = useState({
@@ -31,13 +24,7 @@ const Settings = () => {
         showActivity: true
     });
 
-    const handleAppSettingChange = (e) => {
-        const { name, value } = e.target;
-        setAppSettings(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
+
 
     const handleNotificationChange = (e) => {
         const { name, checked } = e.target;
@@ -76,13 +63,7 @@ const Settings = () => {
 
     const handleResetSettings = () => {
         if (window.confirm('Are you sure you want to reset all settings to default?')) {
-            setAppSettings({
-                theme: 'light',
-                language: 'en',
-                timezone: 'Asia/Kolkata',
-                dateFormat: 'DD/MM/YYYY',
-                currency: 'INR'
-            });
+
             setNotifications({
                 emailNotifications: true,
                 budgetAlerts: true,
@@ -130,119 +111,7 @@ const Settings = () => {
                     </div>
                 )}
 
-                {/* Application Settings */}
-                <div className="card mb-6">
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-900">Application Settings</h2>
-                            <p className="text-sm text-gray-600 mt-1">Customize your application experience</p>
-                        </div>
-                        <svg className="w-8 h-8 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                        </svg>
-                    </div>
 
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Theme */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Theme
-                                </label>
-                                <select
-                                    name="theme"
-                                    value={appSettings.theme}
-                                    onChange={handleAppSettingChange}
-                                    className="input-field"
-                                >
-                                    <option value="light">Light</option>
-                                    <option value="dark">Dark</option>
-                                    <option value="auto">Auto (System)</option>
-                                </select>
-                            </div>
-
-                            {/* Language */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Language
-                                </label>
-                                <select
-                                    name="language"
-                                    value={appSettings.language}
-                                    onChange={handleAppSettingChange}
-                                    className="input-field"
-                                >
-                                    <option value="en">English</option>
-                                    <option value="hi">Hindi</option>
-                                    <option value="mr">Marathi</option>
-                                </select>
-                            </div>
-
-                            {/* Timezone */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Timezone
-                                </label>
-                                <select
-                                    name="timezone"
-                                    value={appSettings.timezone}
-                                    onChange={handleAppSettingChange}
-                                    className="input-field"
-                                >
-                                    <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-                                    <option value="America/New_York">America/New York (EST)</option>
-                                    <option value="Europe/London">Europe/London (GMT)</option>
-                                    <option value="Asia/Dubai">Asia/Dubai (GST)</option>
-                                </select>
-                            </div>
-
-                            {/* Date Format */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Date Format
-                                </label>
-                                <select
-                                    name="dateFormat"
-                                    value={appSettings.dateFormat}
-                                    onChange={handleAppSettingChange}
-                                    className="input-field"
-                                >
-                                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                                </select>
-                            </div>
-
-                            {/* Currency */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Currency
-                                </label>
-                                <select
-                                    name="currency"
-                                    value={appSettings.currency}
-                                    onChange={handleAppSettingChange}
-                                    className="input-field"
-                                >
-                                    <option value="INR">₹ INR (Indian Rupee)</option>
-                                    <option value="USD">$ USD (US Dollar)</option>
-                                    <option value="EUR">€ EUR (Euro)</option>
-                                    <option value="GBP">£ GBP (British Pound)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="flex justify-end pt-4 border-t">
-                            <button
-                                onClick={() => handleSaveSettings('Application')}
-                                className="btn-primary"
-                                disabled={loading}
-                            >
-                                {loading ? 'Saving...' : 'Save Application Settings'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
 
                 {/* Notification Settings */}
                 <div className="card mb-6">

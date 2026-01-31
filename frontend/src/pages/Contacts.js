@@ -560,7 +560,7 @@ const Contacts = () => {
                                         placeholder="Business/Person name"
                                         required
                                     />
-                                    <p className="mt-1 text-xs text-gray-500">VARCHAR(255) - Business or person name</p>
+
                                 </div>
 
                                 {/* Type */}
@@ -592,7 +592,7 @@ const Contacts = () => {
                                             <span className="text-sm">🏢 Vendor (for bills)</span>
                                         </label>
                                     </div>
-                                    <p className="mt-1 text-xs text-gray-500">ENUM('customer', 'vendor') - Determines invoice vs bill relationship</p>
+
                                 </div>
 
                                 {/* Email */}
@@ -608,7 +608,7 @@ const Contacts = () => {
                                         className="input-field"
                                         placeholder="contact@example.com"
                                     />
-                                    <p className="mt-1 text-xs text-gray-500">VARCHAR(255) - Optional but recommended</p>
+
                                 </div>
 
                                 {/* Phone */}
@@ -624,7 +624,7 @@ const Contacts = () => {
                                         className="input-field"
                                         placeholder="+91-9876543210"
                                     />
-                                    <p className="mt-1 text-xs text-gray-500">VARCHAR(20) - Phone number</p>
+
                                 </div>
 
                                 {/* Linked User (only for customers) */}
@@ -646,7 +646,7 @@ const Contacts = () => {
                                                 </option>
                                             ))}
                                         </select>
-                                        <p className="mt-1 text-xs text-gray-500">INT (FK) - Only if type=customer and self-registered</p>
+
                                     </div>
                                 )}
 
@@ -664,7 +664,7 @@ const Contacts = () => {
                                         <option value="active">Active</option>
                                         <option value="archived">Archived</option>
                                     </select>
-                                    <p className="mt-1 text-xs text-gray-500">ENUM('active', 'archived') - Soft delete</p>
+
                                 </div>
 
                                 {/* Form Actions */}
