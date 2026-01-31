@@ -5,12 +5,15 @@
 
 const jwt = require('jsonwebtoken');
 
+// Fallback secret if env not loaded
+const JWT_SECRET = process.env.JWT_SECRET || 'shivbas_jwt_secret_key_2024_hackathon';
+
 const generateAccessToken = (userId, role, rememberMe = false) => {
   // If remember me: 30 days, otherwise: 24 hours
   const expiresIn = rememberMe ? '30d' : (process.env.JWT_EXPIRY || '24h');
   return jwt.sign(
     { userId, role },
-    process.env.JWT_SECRET,
+    JWT_SECRET,
     { expiresIn }
   );
 };
@@ -20,14 +23,14 @@ const generateRefreshToken = (userId, rememberMe = false) => {
   const expiresIn = rememberMe ? '90d' : (process.env.JWT_REFRESH_EXPIRY || '7d');
   return jwt.sign(
     { userId },
-    process.env.JWT_SECRET,
+    JWT_SECRET,
     { expiresIn }
   );
 };
 
 const verifyToken = (token) => {
   try {
-    return jwt.verify(token, process.env.JWT_SECRET);
+    return jwt.verify(token, JWT_SECRET);
   } catch (error) {
     return null;
   }

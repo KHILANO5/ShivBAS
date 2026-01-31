@@ -18,6 +18,7 @@ import Profile from './pages/Profile';
 import PurchaseOrder from './pages/PurchaseOrder';
 import PurchaseBill from './pages/PurchaseBill';
 import Payment from './pages/Payment';
+import PaymentGateway from './pages/PaymentGateway';
 import SaleOrder from './pages/SaleOrder';
 import Receipt from './pages/Receipt';
 import AutoAnalytics from './pages/AutoAnalytics';
@@ -168,6 +169,17 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Payment />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/payment-gateway"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PaymentGateway />
                 </Layout>
               </ProtectedRoute>
             }

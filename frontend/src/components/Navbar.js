@@ -48,7 +48,8 @@ const Navbar = () => {
             items: [
                 { label: 'Purchase Order', path: '/purchase-order' },
                 { label: 'Purchase Bill', path: '/purchase-bill' },
-                { label: 'Payment', path: '/payment' }
+                { label: 'Payment', path: '/payment' },
+                { label: 'Pay Now (Razorpay)', path: '/payment-gateway' }
             ]
         },
         sale: {

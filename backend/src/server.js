@@ -3,6 +3,15 @@
 // Main entry point for the application
 // ============================================================================
 
+// Load environment variables FIRST before any other imports
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+
+// Fallback JWT_SECRET if not in .env
+if (!process.env.JWT_SECRET) {
+    process.env.JWT_SECRET = 'shivbas_jwt_secret_key_2024_hackathon';
+}
+
 const express = require('express');
 const cors = require('cors');
 const { testConnection } = require('../config/database');
@@ -13,7 +22,9 @@ const revisedBudgetsRoutes = require('./routes/revisedBudgetsRoutes');
 const transactionsRoutes = require('./routes/transactionsRoutes');
 const paymentsRoutes = require('./routes/paymentsRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
-require('dotenv').config();
+const purchaseOrdersRoutes = require('./routes/purchaseOrdersRoutes');
+const purchaseBillsRoutes = require('./routes/purchaseBillsRoutes');
+const razorpayRoutes = require('./routes/razorpayRoutes');
 
 const app = express();
 
@@ -75,6 +86,15 @@ app.use('/api/payments', paymentsRoutes);
 
 // Dashboard Routes
 app.use('/api/dashboard', dashboardRoutes);
+
+// Purchase Orders Routes
+app.use('/api/purchase-orders', purchaseOrdersRoutes);
+
+// Purchase Bills Routes
+app.use('/api/purchase-bills', purchaseBillsRoutes);
+
+// Razorpay Payment Routes
+app.use('/api/razorpay', razorpayRoutes);
 
 // ============================================================================
 // HEALTH CHECK ENDPOINT

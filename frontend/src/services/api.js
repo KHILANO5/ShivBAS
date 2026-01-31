@@ -144,4 +144,13 @@ export const dashboardAPI = {
     getBudgetVsActual: (params) => api.get('/dashboard/budget-vs-actual', { params }),
 };
 
+// Purchase Orders APIs
+export const purchaseOrdersAPI = {
+    getAll: (params) => api.get('/purchase-orders', { params }),
+    getById: (id) => api.get(`/purchase-orders/${id}`),
+    create: (data) => api.post('/purchase-orders', data),
+    update: (id, data) => api.put(`/purchase-orders/${id}`, data),
+    delete: (id) => api.delete(`/purchase-orders/${id}`),
+};
+
 export default api;
