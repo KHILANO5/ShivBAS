@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { mockAPI } from '../services/mockAPI';
+import { budgetsAPI, analyticsAPI } from '../services/api';
 
 const Budgets = () => {
     const { isAdmin } = useAuth();
@@ -32,11 +32,12 @@ const Budgets = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const budgetsResponse = await mockAPI.getBudgets({});
-            setBudgets(budgetsResponse.data.data.budgets || []);
+            // Fetch from real backend
+            const budgetsResponse = await budgetsAPI.getAll({});
+            setBudgets(budgetsResponse.data.data || []);
 
-            const analyticsResponse = await mockAPI.getAnalytics({});
-            setAnalytics(analyticsResponse.data.data.events || []);
+            const analyticsResponse = await analyticsAPI.getAll({});
+            setAnalytics(analyticsResponse.data.data || []);
         } catch (error) {
             console.error('Error fetching data:', error);
         } finally {

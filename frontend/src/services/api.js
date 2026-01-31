@@ -52,6 +52,8 @@ export const analyticsAPI = {
     getAll: (params) => api.get('/analytics', { params }),
     getById: (id) => api.get(`/analytics/${id}`),
     create: (data) => api.post('/analytics', data),
+    update: (id, data) => api.put(`/analytics/${id}`, data),
+    delete: (id) => api.delete(`/analytics/${id}`),
 };
 
 // Products APIs
@@ -68,31 +70,44 @@ export const contactsAPI = {
     create: (data) => api.post('/contacts', data),
 };
 
+// Partners APIs
+export const partnersAPI = {
+    getAll: (params) => api.get('/partners', { params }),
+};
+
 // Budgets APIs
 export const budgetsAPI = {
     getAll: (params) => api.get('/budgets', { params }),
     getById: (id) => api.get(`/budgets/${id}`),
     create: (data) => api.post('/budgets', data),
     update: (id, data) => api.put(`/budgets/${id}`, data),
-    revise: (id, data) => api.post(`/budgets/${id}/revise`, data),
-    getAlerts: (id) => api.get(`/budgets/${id}/alerts`),
+    delete: (id) => api.delete(`/budgets/${id}`),
+    getRevisions: (id) => api.get(`/budgets/${id}/revisions`),
+    getAlerts: () => api.get('/budgets/alerts'),
+};
+
+// Transactions APIs
+export const transactionsAPI = {
+    getAll: (params) => api.get('/transactions', { params }),
+    getById: (id) => api.get(`/transactions/${id}`),
+    create: (data) => api.post('/transactions', data),
+    update: (id, data) => api.put(`/transactions/${id}`, data),
+    delete: (id) => api.delete(`/transactions/${id}`),
+    approve: (id) => api.post(`/transactions/${id}/approve`),
 };
 
 // Invoices APIs
 export const invoicesAPI = {
-    getAll: (params) => api.get('/invoices', { params }),
-    getById: (id) => api.get(`/invoices/${id}`),
-    create: (data) => api.post('/invoices', data),
-    post: (id) => api.post(`/invoices/${id}/post`),
-    cancel: (id) => api.post(`/invoices/${id}/cancel`),
+    getAll: (params) => api.get('/transactions', { params: { ...params, type: 'invoice' } }),
+    getById: (id) => api.get(`/transactions/${id}`),
+    create: (data) => api.post('/transactions', { ...data, transaction_type: 'invoice' }),
 };
 
 // Bills APIs
 export const billsAPI = {
-    getAll: (params) => api.get('/bills', { params }),
-    getById: (id) => api.get(`/bills/${id}`),
-    create: (data) => api.post('/bills', data),
-    post: (id) => api.post(`/bills/${id}/post`),
+    getAll: (params) => api.get('/transactions', { params: { ...params, type: 'bill' } }),
+    getById: (id) => api.get(`/transactions/${id}`),
+    create: (data) => api.post('/transactions', { ...data, transaction_type: 'bill' }),
 };
 
 // Payments APIs
@@ -100,14 +115,13 @@ export const paymentsAPI = {
     getAll: (params) => api.get('/payments', { params }),
     getById: (id) => api.get(`/payments/${id}`),
     create: (data) => api.post('/payments', data),
+    getTransactionPayments: (transactionId) => api.get(`/payments/transaction/${transactionId}`),
 };
 
 // Dashboard APIs
 export const dashboardAPI = {
     getSummary: () => api.get('/dashboard/summary'),
-    getBudgetsOverview: () => api.get('/dashboard/budgets-overview'),
-    getAnalyticsById: (id) => api.get(`/dashboard/analytics/${id}`),
-    getPaymentReport: () => api.get('/dashboard/payment-report'),
+    getBudgetVsActual: (params) => api.get('/dashboard/budget-vs-actual', { params }),
 };
 
 export default api;

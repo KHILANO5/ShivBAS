@@ -19,6 +19,7 @@ import SaleOrder from './pages/SaleOrder';
 import Receipt from './pages/Receipt';
 import AutoAnalytics from './pages/AutoAnalytics';
 import DashboardDirect from './pages/DashboardDirect';
+import ApiTest from './pages/ApiTest';
 import Layout from './components/Layout';
 
 function App() {
@@ -32,6 +33,9 @@ function App() {
 
           {/* Direct Dashboard Demo (No Login Required) */}
           <Route path="/demo" element={<DashboardDirect />} />
+          
+          {/* API Connection Test */}
+          <Route path="/api-test" element={<ApiTest />} />
 
           {/* Protected Routes */}
           <Route

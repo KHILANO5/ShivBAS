@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { contactsAPI } from '../services/api';
 
 const Contacts = () => {
     const { isAdmin } = useAuth();
     const [contacts, setContacts] = useState([]);
-    const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -30,83 +30,12 @@ const Contacts = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Mock data - replace with actual API calls
-            setContacts([
-                {
-                    id: 1,
-                    name: 'ABC Corporation',
-                    type: 'customer',
-                    email: 'contact@abccorp.com',
-                    phone: '+91-9876543210',
-                    linked_user_id: null,
-                    status: 'active',
-                    created_at: '2026-01-05T10:00:00',
-                    updated_at: '2026-01-05T10:00:00'
-                },
-                {
-                    id: 2,
-                    name: 'XYZ Enterprises',
-                    type: 'customer',
-                    email: 'info@xyzent.com',
-                    phone: '+91-9876543211',
-                    linked_user_id: null,
-                    status: 'active',
-                    created_at: '2026-01-08T11:30:00',
-                    updated_at: '2026-01-08T11:30:00'
-                },
-                {
-                    id: 3,
-                    name: 'Global Trading Co',
-                    type: 'customer',
-                    email: 'sales@globaltrading.com',
-                    phone: '+91-9876543212',
-                    linked_user_id: null,
-                    status: 'active',
-                    created_at: '2026-01-10T14:20:00',
-                    updated_at: '2026-01-10T14:20:00'
-                },
-                {
-                    id: 4,
-                    name: 'Premium Suppliers Ltd',
-                    type: 'vendor',
-                    email: 'orders@premiumsuppliers.com',
-                    phone: '+91-9876543213',
-                    linked_user_id: null,
-                    status: 'active',
-                    created_at: '2026-01-12T09:45:00',
-                    updated_at: '2026-01-12T09:45:00'
-                },
-                {
-                    id: 5,
-                    name: 'Quality Materials Inc',
-                    type: 'vendor',
-                    email: 'contact@qualitymaterials.com',
-                    phone: '+91-9876543214',
-                    linked_user_id: null,
-                    status: 'active',
-                    created_at: '2026-01-15T16:10:00',
-                    updated_at: '2026-01-15T16:10:00'
-                },
-                {
-                    id: 6,
-                    name: 'Old Customer',
-                    type: 'customer',
-                    email: 'old@customer.com',
-                    phone: '+91-9876543215',
-                    linked_user_id: null,
-                    status: 'archived',
-                    created_at: '2025-12-01T10:00:00',
-                    updated_at: '2026-01-05T12:00:00'
-                }
-            ]);
-
-            // Mock users for linking
-            setUsers([
-                { id: 1, name: 'Admin User', email: 'admin@shivbas.com' },
-                { id: 2, name: 'John Portal', email: 'john@example.com' }
-            ]);
+            const response = await contactsAPI.getAll();
+            const data = response.data.data || [];
+            setContacts(data);
         } catch (error) {
-            console.error('Error fetching data:', error);
+            console.error('Error fetching contacts:', error);
+            alert('Failed to fetch contacts');
         } finally {
             setLoading(false);
         }
@@ -157,21 +86,26 @@ const Contacts = () => {
             return;
         }
 
-        const newContact = {
-            id: contacts.length + 1,
-            name: formData.name,
-            type: formData.type,
-            email: formData.email || null,
-            phone: formData.phone || null,
-            linked_user_id: formData.linked_user_id ? parseInt(formData.linked_user_id) : null,
-            status: formData.status,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        };
+        try {
+            const response = await contactsAPI.create({
+                name: formData.name,
+                type: formData.type,
+                email: formData.email || null,
+                phone: formData.phone || null,
+                linked_user_id: formData.linked_user_id ? parseInt(formData.linked_user_id) : null,
+                status: formData.status
+            });
 
-        setContacts([newContact, ...contacts]);
-        setShowCreateModal(false);
-        resetForm();
+            if (response.data.success) {
+                alert('Contact created successfully!');
+                await fetchData(); // Refresh the list
+                setShowCreateModal(false);
+                resetForm();
+            }
+        } catch (error) {
+            console.error('Error creating contact:', error);
+            alert(error.response?.data?.message || 'Failed to create contact');
+        }
     };
 
     const handleEditContact = async (e) => {
@@ -198,41 +132,70 @@ const Contacts = () => {
             return;
         }
 
-        const updatedContact = {
-            ...selectedContact,
-            name: formData.name,
-            type: formData.type,
-            email: formData.email || null,
-            phone: formData.phone || null,
-            linked_user_id: formData.linked_user_id ? parseInt(formData.linked_user_id) : null,
-            status: formData.status,
-            updated_at: new Date().toISOString()
-        };
+        try {
+            const response = await contactsAPI.update(selectedContact.id, {
+                name: formData.name,
+                type: formData.type,
+                email: formData.email || null,
+                phone: formData.phone || null,
+                linked_user_id: formData.linked_user_id ? parseInt(formData.linked_user_id) : null,
+                status: formData.status
+            });
 
-        setContacts(contacts.map(c => c.id === selectedContact.id ? updatedContact : c));
-        setShowEditModal(false);
-        setSelectedContact(null);
-        resetForm();
+            if (response.data.success) {
+                alert('Contact updated successfully!');
+                await fetchData(); // Refresh the list
+                setShowEditModal(false);
+                setSelectedContact(null);
+                resetForm();
+            }
+        } catch (error) {
+            console.error('Error updating contact:', error);
+            alert(error.response?.data?.message || 'Failed to update contact');
+        }
     };
 
-    const handleDeleteContact = (id) => {
+    const handleDeleteContact = async (id) => {
         if (window.confirm('Are you sure you want to delete this contact? This may affect existing invoices/bills.')) {
-            setContacts(contacts.filter(c => c.id !== id));
+            try {
+                const response = await contactsAPI.delete(id);
+                if (response.data.success) {
+                    alert('Contact deleted successfully!');
+                    await fetchData(); // Refresh the list
+                }
+            } catch (error) {
+                console.error('Error deleting contact:', error);
+                alert(error.response?.data?.message || 'Failed to delete contact');
+            }
         }
     };
 
-    const handleArchiveContact = (id) => {
+    const handleArchiveContact = async (id) => {
         if (window.confirm('Are you sure you want to archive this contact?')) {
-            setContacts(contacts.map(c =>
-                c.id === id ? { ...c, status: 'archived', updated_at: new Date().toISOString() } : c
-            ));
+            try {
+                const response = await contactsAPI.update(id, { status: 'archived' });
+                if (response.data.success) {
+                    alert('Contact archived successfully!');
+                    await fetchData(); // Refresh the list
+                }
+            } catch (error) {
+                console.error('Error archiving contact:', error);
+                alert(error.response?.data?.message || 'Failed to archive contact');
+            }
         }
     };
 
-    const handleActivateContact = (id) => {
-        setContacts(contacts.map(c =>
-            c.id === id ? { ...c, status: 'active', updated_at: new Date().toISOString() } : c
-        ));
+    const handleActivateContact = async (id) => {
+        try {
+            const response = await contactsAPI.update(id, { status: 'active' });
+            if (response.data.success) {
+                alert('Contact activated successfully!');
+                await fetchData(); // Refresh the list
+            }
+        } catch (error) {
+            console.error('Error activating contact:', error);
+            alert(error.response?.data?.message || 'Failed to activate contact');
+        }
     };
 
     const openEditModal = (contact) => {
@@ -640,11 +603,6 @@ const Contacts = () => {
                                             className="input-field"
                                         >
                                             <option value="">None</option>
-                                            {users.map(user => (
-                                                <option key={user.id} value={user.id}>
-                                                    {user.name} ({user.email})
-                                                </option>
-                                            ))}
                                         </select>
                                         <p className="mt-1 text-xs text-gray-500">INT (FK) - Only if type=customer and self-registered</p>
                                     </div>
@@ -794,11 +752,6 @@ const Contacts = () => {
                                             className="input-field"
                                         >
                                             <option value="">None</option>
-                                            {users.map(user => (
-                                                <option key={user.id} value={user.id}>
-                                                    {user.name} ({user.email})
-                                                </option>
-                                            ))}
                                         </select>
                                     </div>
                                 )}

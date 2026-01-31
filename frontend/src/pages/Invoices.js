@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { invoicesAPI, contactsAPI, analyticsAPI, productsAPI } from '../services/api';
 
 const Invoices = () => {
     const { isAdmin, user } = useAuth();
@@ -33,82 +34,22 @@ const Invoices = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Mock data - replace with actual API calls
-            setInvoices([
-                {
-                    id: 1,
-                    customer_id: 1,
-                    customer_name: 'ABC Corporation',
-                    analytics_id: 1,
-                    analytics_event: 'Expo 2026',
-                    created_by_user_id: 1,
-                    created_by: 'Admin User',
-                    total_amount: 150000,
-                    status: 'posted',
-                    payment_status: 'paid',
-                    created_at: '2026-01-15T10:30:00',
-                    posted_at: '2026-01-16T14:20:00',
-                    line_items: [
-                        { id: 1, product_id: 1, product_name: 'Product A', quantity: 100, unit_price: 500, tax_amount: 50000 }
-                    ]
-                },
-                {
-                    id: 2,
-                    customer_id: 2,
-                    customer_name: 'XYZ Enterprises',
-                    analytics_id: 2,
-                    analytics_event: 'Summer Sale',
-                    created_by_user_id: 1,
-                    created_by: 'Admin User',
-                    total_amount: 75000,
-                    status: 'posted',
-                    payment_status: 'partial',
-                    created_at: '2026-01-20T09:15:00',
-                    posted_at: '2026-01-21T11:00:00',
-                    line_items: [
-                        { id: 2, product_id: 2, product_name: 'Product B', quantity: 50, unit_price: 300, tax_amount: 15000 }
-                    ]
-                },
-                {
-                    id: 3,
-                    customer_id: 3,
-                    customer_name: 'Global Trading Co',
-                    analytics_id: 3,
-                    analytics_event: 'Product Launch',
-                    created_by_user_id: 1,
-                    created_by: 'Admin User',
-                    total_amount: 120000,
-                    status: 'draft',
-                    payment_status: 'not_paid',
-                    created_at: '2026-01-25T16:45:00',
-                    posted_at: null,
-                    line_items: [
-                        { id: 3, product_id: 3, product_name: 'Product C', quantity: 80, unit_price: 600, tax_amount: 48000 }
-                    ]
-                }
+            const [invoicesResponse, customersResponse, analyticsResponse, productsResponse] = await Promise.all([
+                invoicesAPI.getAll(),
+                contactsAPI.getAll(),
+                analyticsAPI.getAll(),
+                productsAPI.getAll()
             ]);
 
-            setCustomers([
-                { id: 1, name: 'ABC Corporation', type: 'customer' },
-                { id: 2, name: 'XYZ Enterprises', type: 'customer' },
-                { id: 3, name: 'Global Trading Co', type: 'customer' }
-            ]);
-
-            setAnalytics([
-                { id: 1, event_name: 'Expo 2026', partner_tag: 'customer' },
-                { id: 2, event_name: 'Summer Sale', partner_tag: 'customer' },
-                { id: 3, event_name: 'Product Launch', partner_tag: 'customer' }
-            ]);
-
-            setProducts([
-                { id: 1, name: 'Product A', sale_price: 500, tax_rate: 18 },
-                { id: 2, name: 'Product B', sale_price: 300, tax_rate: 18 },
-                { id: 3, name: 'Product C', sale_price: 600, tax_rate: 18 },
-                { id: 4, name: 'Product D', sale_price: 450, tax_rate: 18 },
-                { id: 5, name: 'Product E', sale_price: 550, tax_rate: 18 }
-            ]);
+            setInvoices(invoicesResponse.data.data || []);
+            // Filter only customers from contacts
+            const customersData = (customersResponse.data.data || []).filter(c => c.type === 'customer');
+            setCustomers(customersData);
+            setAnalytics(analyticsResponse.data.data || []);
+            setProducts(productsResponse.data.data || []);
         } catch (error) {
             console.error('Error fetching data:', error);
+            alert('Failed to fetch data');
         } finally {
             setLoading(false);
         }
@@ -183,60 +124,76 @@ const Invoices = () => {
             return;
         }
 
-        const customer = customers.find(c => c.id === parseInt(formData.customer_id));
-        const analyticsEvent = analytics.find(a => a.id === parseInt(formData.analytics_id));
-        const total = calculateTotal();
+        try {
+            const total = calculateTotal();
 
-        const newInvoice = {
-            id: invoices.length + 1,
-            customer_id: parseInt(formData.customer_id),
-            customer_name: customer?.name,
-            analytics_id: formData.analytics_id ? parseInt(formData.analytics_id) : null,
-            analytics_event: analyticsEvent?.event_name,
-            created_by_user_id: user?.id || 1,
-            created_by: user?.name || 'Admin User',
-            total_amount: total,
-            status: formData.status,
-            payment_status: formData.payment_status,
-            created_at: new Date().toISOString(),
-            posted_at: formData.status === 'posted' ? new Date().toISOString() : null,
-            line_items: formData.line_items.map((item, index) => {
-                const product = products.find(p => p.id === parseInt(item.product_id));
-                return {
-                    id: index + 1,
+            const response = await invoicesAPI.create({
+                customer_id: parseInt(formData.customer_id),
+                analytics_id: formData.analytics_id ? parseInt(formData.analytics_id) : null,
+                status: formData.status,
+                payment_status: formData.payment_status,
+                line_items: formData.line_items.map(item => ({
                     product_id: parseInt(item.product_id),
-                    product_name: product?.name,
                     quantity: parseInt(item.quantity),
                     unit_price: parseFloat(item.unit_price),
                     tax_amount: parseFloat(item.tax_amount)
-                };
-            })
-        };
+                }))
+            });
 
-        setInvoices([newInvoice, ...invoices]);
-        setShowCreateModal(false);
-        resetForm();
+            if (response.data.success) {
+                alert('Invoice created successfully!');
+                await fetchData(); // Refresh the list
+                setShowCreateModal(false);
+                resetForm();
+            }
+        } catch (error) {
+            console.error('Error creating invoice:', error);
+            alert(error.response?.data?.message || 'Failed to create invoice');
+        }
     };
 
-    const handlePostInvoice = (id) => {
+    const handlePostInvoice = async (id) => {
         if (window.confirm('Are you sure you want to post this invoice? This will affect your budget.')) {
-            setInvoices(invoices.map(inv =>
-                inv.id === id ? { ...inv, status: 'posted', posted_at: new Date().toISOString() } : inv
-            ));
+            try {
+                const response = await invoicesAPI.update(id, { status: 'posted' });
+                if (response.data.success) {
+                    alert('Invoice posted successfully!');
+                    await fetchData(); // Refresh the list
+                }
+            } catch (error) {
+                console.error('Error posting invoice:', error);
+                alert(error.response?.data?.message || 'Failed to post invoice');
+            }
         }
     };
 
-    const handleCancelInvoice = (id) => {
+    const handleCancelInvoice = async (id) => {
         if (window.confirm('Are you sure you want to cancel this invoice?')) {
-            setInvoices(invoices.map(inv =>
-                inv.id === id ? { ...inv, status: 'cancelled' } : inv
-            ));
+            try {
+                const response = await invoicesAPI.update(id, { status: 'cancelled' });
+                if (response.data.success) {
+                    alert('Invoice cancelled successfully!');
+                    await fetchData(); // Refresh the list
+                }
+            } catch (error) {
+                console.error('Error cancelling invoice:', error);
+                alert(error.response?.data?.message || 'Failed to cancel invoice');
+            }
         }
     };
 
-    const handleDeleteInvoice = (id) => {
+    const handleDeleteInvoice = async (id) => {
         if (window.confirm('Are you sure you want to delete this invoice?')) {
-            setInvoices(invoices.filter(inv => inv.id !== id));
+            try {
+                const response = await invoicesAPI.delete(id);
+                if (response.data.success) {
+                    alert('Invoice deleted successfully!');
+                    await fetchData(); // Refresh the list
+                }
+            } catch (error) {
+                console.error('Error deleting invoice:', error);
+                alert(error.response?.data?.message || 'Failed to delete invoice');
+            }
         }
     };
 

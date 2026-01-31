@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { mockAPI } from '../services/mockAPI';
+import { dashboardAPI, budgetsAPI, analyticsAPI } from '../services/api';
 
 const Dashboard = () => {
     const { user, isAdmin } = useAuth();
@@ -19,17 +19,17 @@ const Dashboard = () => {
         setError('');
 
         try {
-            // Fetch dashboard summary
-            const summaryResponse = await mockAPI.getDashboardSummary();
+            // Fetch dashboard summary from real backend
+            const summaryResponse = await dashboardAPI.getSummary();
             setSummary(summaryResponse.data.data);
 
-            // Fetch budgets
-            const budgetsResponse = await mockAPI.getBudgets({ limit: 10 });
-            setBudgets(budgetsResponse.data.data.budgets || []);
+            // Fetch budgets from real backend
+            const budgetsResponse = await budgetsAPI.getAll({ limit: 10 });
+            setBudgets(budgetsResponse.data.data || []);
 
-            // Fetch analytics events
-            const analyticsResponse = await mockAPI.getAnalytics({ limit: 10 });
-            setAnalytics(analyticsResponse.data.data.events || []);
+            // Fetch analytics events from real backend
+            const analyticsResponse = await analyticsAPI.getAll({ limit: 10 });
+            setAnalytics(analyticsResponse.data.data || []);
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to fetch dashboard data');
             console.error('Dashboard error:', err);
@@ -227,15 +227,15 @@ const Dashboard = () => {
                                                     <div className="flex items-center">
                                                         <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
                                                             <div
-                                                                className={`h-2 rounded-full ${budget.percentage_achieved >= 100 ? 'bg-red-600' :
-                                                                    budget.percentage_achieved >= 80 ? 'bg-yellow-500' :
+                                                                className={`h-2 rounded-full ${parseFloat(budget.percentage_achieved || 0) >= 100 ? 'bg-red-600' :
+                                                                    parseFloat(budget.percentage_achieved || 0) >= 80 ? 'bg-yellow-500' :
                                                                         'bg-green-500'
                                                                     }`}
-                                                                style={{ width: `${Math.min(budget.percentage_achieved, 100)}%` }}
+                                                                style={{ width: `${Math.min(parseFloat(budget.percentage_achieved || 0), 100)}%` }}
                                                             ></div>
                                                         </div>
                                                         <span className="text-sm text-gray-600 min-w-[3rem]">
-                                                            {budget.percentage_achieved?.toFixed(1)}%
+                                                            {parseFloat(budget.percentage_achieved || 0).toFixed(1)}%
                                                         </span>
                                                     </div>
                                                 </td>

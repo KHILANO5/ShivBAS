@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { mockAPI } from '../services/mockAPI';
+import { analyticsAPI, productsAPI, contactsAPI } from '../services/api';
 
 const Analytics = () => {
     const { isAdmin } = useAuth();
@@ -36,26 +36,18 @@ const Analytics = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const analyticsResponse = await mockAPI.getAnalytics({});
-            setAnalytics(analyticsResponse.data.data.events || []);
-
-            // Mock users data
-            setUsers([
-                { id: 1, name: 'ABC Suppliers Ltd', role: 'portal' },
-                { id: 2, name: 'XYZ Customer Corp', role: 'portal' },
-                { id: 3, name: 'Global Trading Co', role: 'portal' }
+            const [analyticsResponse, productsResponse, contactsResponse] = await Promise.all([
+                analyticsAPI.getAll(),
+                productsAPI.getAll(),
+                contactsAPI.getAll()
             ]);
 
-            // Mock products data
-            setProducts([
-                { id: 1, name: 'Product A', category: 'Electronics', sale_price: 500, purchase_price: 350 },
-                { id: 2, name: 'Product B', category: 'Furniture', sale_price: 300, purchase_price: 200 },
-                { id: 3, name: 'Product C', category: 'Textiles', sale_price: 600, purchase_price: 400 },
-                { id: 4, name: 'Product D', category: 'Electronics', sale_price: 450, purchase_price: 300 },
-                { id: 5, name: 'Product E', category: 'Furniture', sale_price: 550, purchase_price: 380 }
-            ]);
+            setAnalytics(analyticsResponse.data.data || []);
+            setProducts(productsResponse.data.data || []);
+            setUsers(contactsResponse.data.data || []);
         } catch (error) {
             console.error('Error fetching data:', error);
+            alert('Failed to fetch data');
         } finally {
             setLoading(false);
         }
@@ -114,77 +106,101 @@ const Analytics = () => {
             return;
         }
 
-        const partner = users.find(u => u.id === parseInt(formData.partner_id));
-        const product = products.find(p => p.id === parseInt(formData.product_id));
+        try {
+            const response = await analyticsAPI.create({
+                event_name: formData.event_name,
+                partner_tag: formData.partner_tag,
+                partner_id: parseInt(formData.partner_id),
+                product_id: parseInt(formData.product_id),
+                product_category: formData.product_category,
+                no_of_units: parseInt(formData.no_of_units),
+                unit_price: parseFloat(formData.unit_price),
+                profit: parseFloat(formData.profit),
+                profit_margin_percentage: parseFloat(formData.profit_margin_percentage),
+                status: formData.status
+            });
 
-        // Create new event matching database schema
-        const newEvent = {
-            id: analytics.length + 1,
-            event_name: formData.event_name,
-            partner_tag: formData.partner_tag,
-            partner_id: parseInt(formData.partner_id),
-            partner_name: partner?.name,
-            product_id: parseInt(formData.product_id),
-            product_name: product?.name,
-            product_category: formData.product_category,
-            no_of_units: parseInt(formData.no_of_units),
-            unit_price: parseFloat(formData.unit_price),
-            profit: parseFloat(formData.profit),
-            profit_margin_percentage: parseFloat(formData.profit_margin_percentage),
-            status: formData.status,
-            created_at: new Date().toISOString()
-        };
-
-        setAnalytics([newEvent, ...analytics]);
-        setShowCreateModal(false);
-        resetForm();
+            if (response.data.success) {
+                alert('Analytics event created successfully!');
+                await fetchData(); // Refresh the list
+                setShowCreateModal(false);
+                resetForm();
+            }
+        } catch (error) {
+            console.error('Error creating analytics event:', error);
+            alert(error.response?.data?.message || 'Failed to create analytics event');
+        }
     };
 
     const handleEditEvent = async (e) => {
         e.preventDefault();
 
-        const partner = users.find(u => u.id === parseInt(formData.partner_id));
-        const product = products.find(p => p.id === parseInt(formData.product_id));
+        try {
+            const response = await analyticsAPI.update(selectedEvent.id, {
+                event_name: formData.event_name,
+                partner_tag: formData.partner_tag,
+                partner_id: parseInt(formData.partner_id),
+                product_id: parseInt(formData.product_id),
+                product_category: formData.product_category,
+                no_of_units: parseInt(formData.no_of_units),
+                unit_price: parseFloat(formData.unit_price),
+                profit: parseFloat(formData.profit),
+                profit_margin_percentage: parseFloat(formData.profit_margin_percentage),
+                status: formData.status
+            });
 
-        const updatedEvent = {
-            ...selectedEvent,
-            event_name: formData.event_name,
-            partner_tag: formData.partner_tag,
-            partner_id: parseInt(formData.partner_id),
-            partner_name: partner?.name,
-            product_id: parseInt(formData.product_id),
-            product_name: product?.name,
-            product_category: formData.product_category,
-            no_of_units: parseInt(formData.no_of_units),
-            unit_price: parseFloat(formData.unit_price),
-            profit: parseFloat(formData.profit),
-            profit_margin_percentage: parseFloat(formData.profit_margin_percentage),
-            status: formData.status,
-            updated_at: new Date().toISOString()
-        };
-
-        setAnalytics(analytics.map(e => e.id === selectedEvent.id ? updatedEvent : e));
-        setShowEditModal(false);
-        setSelectedEvent(null);
-        resetForm();
-    };
-
-    const handleDeleteEvent = (id) => {
-        if (window.confirm('Are you sure you want to delete this analytics event?')) {
-            setAnalytics(analytics.filter(e => e.id !== id));
+            if (response.data.success) {
+                alert('Analytics event updated successfully!');
+                await fetchData(); // Refresh the list
+                setShowEditModal(false);
+                setSelectedEvent(null);
+                resetForm();
+            }
+        } catch (error) {
+            console.error('Error updating analytics event:', error);
+            alert(error.response?.data?.message || 'Failed to update analytics event');
         }
     };
 
-    const handleArchiveEvent = (id) => {
-        setAnalytics(analytics.map(e =>
-            e.id === id ? { ...e, status: 'archived', updated_at: new Date().toISOString() } : e
-        ));
+    const handleDeleteEvent = async (id) => {
+        if (window.confirm('Are you sure you want to delete this analytics event?')) {
+            try {
+                const response = await analyticsAPI.delete(id);
+                if (response.data.success) {
+                    alert('Analytics event deleted successfully!');
+                    await fetchData(); // Refresh the list
+                }
+            } catch (error) {
+                console.error('Error deleting analytics event:', error);
+                alert(error.response?.data?.message || 'Failed to delete analytics event');
+            }
+        }
     };
 
-    const handleActivateEvent = (id) => {
-        setAnalytics(analytics.map(e =>
-            e.id === id ? { ...e, status: 'active', updated_at: new Date().toISOString() } : e
-        ));
+    const handleArchiveEvent = async (id) => {
+        try {
+            const response = await analyticsAPI.update(id, { status: 'archived' });
+            if (response.data.success) {
+                alert('Analytics event archived successfully!');
+                await fetchData(); // Refresh the list
+            }
+        } catch (error) {
+            console.error('Error archiving analytics event:', error);
+            alert(error.response?.data?.message || 'Failed to archive analytics event');
+        }
+    };
+
+    const handleActivateEvent = async (id) => {
+        try {
+            const response = await analyticsAPI.update(id, { status: 'active' });
+            if (response.data.success) {
+                alert('Analytics event activated successfully!');
+                await fetchData(); // Refresh the list
+            }
+        } catch (error) {
+            console.error('Error activating analytics event:', error);
+            alert(error.response?.data?.message || 'Failed to activate analytics event');
+        }
     };
 
     const openEditModal = (event) => {

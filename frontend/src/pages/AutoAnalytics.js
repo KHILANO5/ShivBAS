@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import mockAPI from '../services/mockAPI';
+import { analyticsAPI } from '../services/api';
 
 const AutoAnalytics = () => {
     const [analytics, setAnalytics] = useState([]);
@@ -20,8 +20,8 @@ const AutoAnalytics = () => {
     const fetchAnalytics = async () => {
         setLoading(true);
         try {
-            const response = await mockAPI.getAnalytics();
-            const data = response.data.data.events || [];
+            const response = await analyticsAPI.getAll();
+            const data = response.data.data || [];
             setAnalytics(data);
             calculateInsights(data);
         } catch (error) {

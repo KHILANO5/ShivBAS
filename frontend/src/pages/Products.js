@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { productsAPI } from '../services/api';
 
 const Products = () => {
     const { isAdmin } = useAuth();
@@ -28,71 +29,12 @@ const Products = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Mock data - replace with actual API calls
-            setProducts([
-                {
-                    id: 1,
-                    name: 'Premium Wood',
-                    category: 'Raw Materials',
-                    unit_price: 500.00,
-                    tax_rate: 18.00,
-                    status: 'active',
-                    created_at: '2026-01-10T10:00:00',
-                    updated_at: '2026-01-10T10:00:00'
-                },
-                {
-                    id: 2,
-                    name: 'Steel Sheets',
-                    category: 'Raw Materials',
-                    unit_price: 750.00,
-                    tax_rate: 18.00,
-                    status: 'active',
-                    created_at: '2026-01-12T11:30:00',
-                    updated_at: '2026-01-12T11:30:00'
-                },
-                {
-                    id: 3,
-                    name: 'Cotton Fabric',
-                    category: 'Textiles',
-                    unit_price: 300.00,
-                    tax_rate: 5.00,
-                    status: 'active',
-                    created_at: '2026-01-15T14:20:00',
-                    updated_at: '2026-01-15T14:20:00'
-                },
-                {
-                    id: 4,
-                    name: 'Plastic Components',
-                    category: 'Components',
-                    unit_price: 450.00,
-                    tax_rate: 18.00,
-                    status: 'active',
-                    created_at: '2026-01-18T09:45:00',
-                    updated_at: '2026-01-18T09:45:00'
-                },
-                {
-                    id: 5,
-                    name: 'Glass Panels',
-                    category: 'Raw Materials',
-                    unit_price: 600.00,
-                    tax_rate: 18.00,
-                    status: 'active',
-                    created_at: '2026-01-20T16:10:00',
-                    updated_at: '2026-01-20T16:10:00'
-                },
-                {
-                    id: 6,
-                    name: 'Old Product',
-                    category: 'Discontinued',
-                    unit_price: 200.00,
-                    tax_rate: 18.00,
-                    status: 'archived',
-                    created_at: '2025-12-01T10:00:00',
-                    updated_at: '2026-01-05T12:00:00'
-                }
-            ]);
+            const response = await productsAPI.getAll();
+            const data = response.data.data || [];
+            setProducts(data);
         } catch (error) {
-            console.error('Error fetching data:', error);
+            console.error('Error fetching products:', error);
+            alert('Failed to fetch products');
         } finally {
             setLoading(false);
         }
@@ -125,59 +67,93 @@ const Products = () => {
             return;
         }
 
-        const newProduct = {
-            id: products.length + 1,
-            name: formData.name,
-            category: formData.category,
-            unit_price: parseFloat(formData.unit_price),
-            tax_rate: parseFloat(formData.tax_rate),
-            status: formData.status,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        };
+        try {
+            const response = await productsAPI.create({
+                name: formData.name,
+                category: formData.category,
+                unit_price: parseFloat(formData.unit_price),
+                tax_rate: parseFloat(formData.tax_rate),
+                status: formData.status
+            });
 
-        setProducts([newProduct, ...products]);
-        setShowCreateModal(false);
-        resetForm();
+            if (response.data.success) {
+                alert('Product created successfully!');
+                await fetchData(); // Refresh the list
+                setShowCreateModal(false);
+                resetForm();
+            }
+        } catch (error) {
+            console.error('Error creating product:', error);
+            alert(error.response?.data?.message || 'Failed to create product');
+        }
     };
 
     const handleEditProduct = async (e) => {
         e.preventDefault();
 
-        const updatedProduct = {
-            ...selectedProduct,
-            name: formData.name,
-            category: formData.category,
-            unit_price: parseFloat(formData.unit_price),
-            tax_rate: parseFloat(formData.tax_rate),
-            status: formData.status,
-            updated_at: new Date().toISOString()
-        };
+        try {
+            const response = await productsAPI.update(selectedProduct.id, {
+                name: formData.name,
+                category: formData.category,
+                unit_price: parseFloat(formData.unit_price),
+                tax_rate: parseFloat(formData.tax_rate),
+                status: formData.status
+            });
 
-        setProducts(products.map(p => p.id === selectedProduct.id ? updatedProduct : p));
-        setShowEditModal(false);
-        setSelectedProduct(null);
-        resetForm();
+            if (response.data.success) {
+                alert('Product updated successfully!');
+                await fetchData(); // Refresh the list
+                setShowEditModal(false);
+                setSelectedProduct(null);
+                resetForm();
+            }
+        } catch (error) {
+            console.error('Error updating product:', error);
+            alert(error.response?.data?.message || 'Failed to update product');
+        }
     };
 
-    const handleDeleteProduct = (id) => {
+    const handleDeleteProduct = async (id) => {
         if (window.confirm('Are you sure you want to delete this product? This may affect existing invoices.')) {
-            setProducts(products.filter(p => p.id !== id));
+            try {
+                const response = await productsAPI.delete(id);
+                if (response.data.success) {
+                    alert('Product deleted successfully!');
+                    await fetchData(); // Refresh the list
+                }
+            } catch (error) {
+                console.error('Error deleting product:', error);
+                alert(error.response?.data?.message || 'Failed to delete product');
+            }
         }
     };
 
-    const handleArchiveProduct = (id) => {
+    const handleArchiveProduct = async (id) => {
         if (window.confirm('Are you sure you want to archive this product?')) {
-            setProducts(products.map(p =>
-                p.id === id ? { ...p, status: 'archived', updated_at: new Date().toISOString() } : p
-            ));
+            try {
+                const response = await productsAPI.update(id, { status: 'archived' });
+                if (response.data.success) {
+                    alert('Product archived successfully!');
+                    await fetchData(); // Refresh the list
+                }
+            } catch (error) {
+                console.error('Error archiving product:', error);
+                alert(error.response?.data?.message || 'Failed to archive product');
+            }
         }
     };
 
-    const handleActivateProduct = (id) => {
-        setProducts(products.map(p =>
-            p.id === id ? { ...p, status: 'active', updated_at: new Date().toISOString() } : p
-        ));
+    const handleActivateProduct = async (id) => {
+        try {
+            const response = await productsAPI.update(id, { status: 'active' });
+            if (response.data.success) {
+                alert('Product activated successfully!');
+                await fetchData(); // Refresh the list
+            }
+        } catch (error) {
+            console.error('Error activating product:', error);
+            alert(error.response?.data?.message || 'Failed to activate product');
+        }
     };
 
     const openEditModal = (product) => {
