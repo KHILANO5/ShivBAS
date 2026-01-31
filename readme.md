@@ -1,92 +1,163 @@
-# ShivBAS — Shiv Budget Accounting System
+# 🎯 ShivBAS - Budget & Analytics System
+
+**Full-Stack Financial Management Application**
+
+A comprehensive budget management, analytics tracking, and financial reporting system built with React.js, Node.js/Express, and MySQL.
 
 ## 📋 Project Overview
 
-**ShivBAS** is a web-based mini ERP system designed for Shiv Furniture to track budget accounting and financial monitoring. The system provides:
-
-- **Budget Tracking** — Monitor budgets per event/cost center with real-time actual vs. budgeted metrics
-- **Transaction Management** — Create and post sales invoices and purchase bills
-- **Event-Based Analytics** — Track partner interactions (suppliers/customers) with profit calculations
-- **Admin Dashboard** — Visualize budget metrics, expenses, and profits with charts and alerts
-- **Customer Portal** — Self-service access to invoices, payments, and order history
-- **Automated Rules** — Auto-assign events to transactions based on product categories or vendors
-
----
-
-## 🏗️ Architecture
-
-### Tech Stack
-- **Frontend**: React + Tailwind CSS + Vite
-- **Backend**: Node.js + Express.js
-- **Database**: MySQL 8.0+
-- **Authentication**: JWT + bcrypt
-- **Payment**: Test Mode (Gateway Integration Ready)
-
-### Database Tables (15)
-1. users, password_tokens, contacts, products
-2. analytics (event tracking)
-3. budgets, revised_budget, budget_graph
-4. customer_invoices, invoice_line_items
-5. vendor_bills, bill_line_items
-6. payments, auto_analytical_models, audit_logs
+ShivBAS is a production-ready financial management application featuring:
+- 🔐 Secure JWT authentication with role-based access
+- 📊 Real-time data synchronization
+- 💼 16-table normalized database design
+- 🎨 Responsive React UI with Tailwind CSS
+- 🔗 20+ RESTful API endpoints
+- ✅ 100% backend integration (zero mock data)
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Setup Database
+### Prerequisites
+- Node.js 18+
+- MySQL 8.0+
+- npm or yarn
 
+### Installation
+
+**1. Clone & Setup Database**
 ```bash
+git clone <repository-url>
+cd ShivBAS
+
+# Create database
 mysql -u root -p
 CREATE DATABASE shivbas_db;
 USE shivbas_db;
 SOURCE backend/database/schema.sql;
 SOURCE backend/database/seed.sql;
-SHOW TABLES;
 ```
 
-### 2. Setup Backend
-
+**2. Configure Backend**
 ```bash
 cd backend
 npm install
-cp .env.example .env
-# Edit .env with your MySQL credentials
-npm run dev
+# Create .env file with database credentials
+npm start
+# Server runs on http://localhost:5000
 ```
 
-### 3. Setup Frontend
-
+**3. Configure Frontend**
 ```bash
 cd frontend
 npm install
-cp .env.example .env
-npm run dev
-# Open http://localhost:3000
+npm start
+# App runs on http://localhost:3000
+```
+
+**4. Login**
+- URL: http://localhost:3000/login
+- Username: `admin_user`
+- Password: `Test@123`
+
+---
+
+## 🛠️ Technology Stack
+
+**Frontend:**
+- React 19.2.4 + React Router 7.13.0
+- Axios 1.13.4 for API calls
+- Tailwind CSS for styling
+- Context API for state management
+
+**Backend:**
+- Node.js + Express.js
+- MySQL 8.0 with 16 tables
+- JWT Authentication
+- bcryptjs password hashing
+
+---
+
+## ✨ Key Features
+
+✅ User Authentication & Authorization  
+✅ Product Management (Full CRUD)  
+✅ Contact Management (Customers & Vendors)  
+✅ Budget Planning & Tracking  
+✅ Invoice Generation & Management  
+✅ Purchase Bills & Orders  
+✅ Payment Recording & Tracking  
+✅ Analytics Dashboard with Real-time Data  
+✅ Event-based Analytics Tracking  
+✅ Advanced Filtering & Search  
+✅ Responsive Design (Mobile/Tablet/Desktop)
+
+---
+
+## 📚 Documentation
+
+For complete project details, see:
+- **[PROJECT_COMPLETION_REPORT.md](PROJECT_COMPLETION_REPORT.md)** - Comprehensive project documentation, architecture, and team contributions
+- **[API_CONTRACTS.md](API_CONTRACTS.md)** - Complete API endpoint specifications
+- **[DATABASE_REFERENCE.md](DATABASE_REFERENCE.md)** - Database schema and relationships
+
+---
+
+## 📦 Project Structure
+
+```
+ShivBAS/
+├── backend/
+│   ├── config/              # Database configuration
+│   ├── database/            # Schema & seed files
+│   ├── src/
+│   │   ├── controllers/     # Business logic
+│   │   ├── routes/          # API routes
+│   │   ├── middleware/      # Auth & validation
+│   │   └── server.js        # Entry point
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # Reusable components
+│   │   ├── context/         # Auth context
+│   │   ├── pages/           # Page components (18+)
+│   │   ├── services/        # API service layer
+│   │   └── App.js
+│   └── package.json
+└── PROJECT_COMPLETION_REPORT.md
 ```
 
 ---
 
-## 📊 Demo Login
+## 👥 Team
 
-**Login ID**: admin_user  
-**Password**: Test@123
-
----
-
-## 📈 Features
-
-✅ Event-based budget tracking (income/expense)  
-✅ Real-time budget vs actual metrics  
-✅ Partner tracking (suppliers/customers)  
-✅ Profit calculation per event  
-✅ Invoice & payment management  
-✅ Admin dashboard with charts & alerts  
-✅ Customer portal (self-service)  
-✅ Auto-assign events via rules  
-✅ Revised budget tracking  
-✅ Audit logging
+- **Yash** - Mentor & Technical Oversight
+- **Khilan** - Database Architecture (16 tables, relationships, seeds)
+- **Pruthvi** - Frontend Development (React UI/UX, 18+ pages)
+- **[Your Name]** - Backend & API Integration (20+ endpoints, 100% connectivity)
 
 ---
 
-**For detailed documentation, see `backend/database/schema.sql` and `backend/.env.example`**
+## 📊 Project Status
+
+**Status:** ✅ Production Ready  
+**Last Updated:** January 31, 2026  
+**Version:** 1.0.0
+
+### Achievement Metrics:
+- 16 database tables with proper relationships
+- 20+ RESTful API endpoints
+- 14 fully functional frontend pages
+- 100% backend integration (zero mock data)
+- Complete authentication & authorization
+- Production-ready error handling
+
+---
+
+## 🙏 Acknowledgments
+
+Special thanks to Mentor Yash for guidance and technical support throughout the development process.
+
+---
+
+**For detailed documentation, architecture diagrams, and complete feature breakdown, see [PROJECT_COMPLETION_REPORT.md](PROJECT_COMPLETION_REPORT.md)**
