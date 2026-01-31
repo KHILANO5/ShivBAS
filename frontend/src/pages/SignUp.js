@@ -144,7 +144,7 @@ const SignUp = () => {
                 password: formData.password
             });
 
-            if (response.data.success) {
+            if (response.success) {
                 // Show success message
                 setSuccessMessage('Account created successfully! Redirecting to login...');
 
@@ -163,7 +163,7 @@ const SignUp = () => {
                 }, 2000);
             } else {
                 setErrors({
-                    submit: response.data.message || 'Registration failed. Please try again.'
+                    submit: response.message || 'Registration failed. Please try again.'
                 });
             }
 

@@ -247,11 +247,11 @@ const Analytics = () => {
     // Calculate statistics
     const stats = {
         total: filteredAnalytics.length,
-        totalProfit: filteredAnalytics.reduce((sum, e) => sum + (e.profit || 0), 0),
+        totalProfit: filteredAnalytics.reduce((sum, e) => sum + (parseFloat(e.profit) || 0), 0),
         avgMargin: filteredAnalytics.length > 0
-            ? filteredAnalytics.reduce((sum, e) => sum + (e.profit_margin_percentage || 0), 0) / filteredAnalytics.length
+            ? filteredAnalytics.reduce((sum, e) => sum + (parseFloat(e.profit_margin_percentage) || 0), 0) / filteredAnalytics.length
             : 0,
-        totalUnits: filteredAnalytics.reduce((sum, e) => sum + (e.no_of_units || 0), 0)
+        totalUnits: filteredAnalytics.reduce((sum, e) => sum + (parseInt(e.no_of_units) || 0), 0)
     };
 
     if (loading) {
@@ -287,15 +287,15 @@ const Analytics = () => {
                     </div>
                     <div className="card">
                         <p className="text-sm font-medium text-gray-600">Total Profit</p>
-                        <p className="text-2xl font-bold text-green-600 mt-2">₹{stats.totalProfit.toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-green-600 mt-2">₹{stats.totalProfit.toFixed(2)}</p>
                     </div>
                     <div className="card">
                         <p className="text-sm font-medium text-gray-600">Avg Profit Margin</p>
-                        <p className="text-2xl font-bold text-blue-600 mt-2">{stats.avgMargin.toFixed(1)}%</p>
+                        <p className="text-2xl font-bold text-blue-600 mt-2">{isNaN(stats.avgMargin) ? '0.0' : stats.avgMargin.toFixed(1)}%</p>
                     </div>
                     <div className="card">
                         <p className="text-sm font-medium text-gray-600">Total Units</p>
-                        <p className="text-2xl font-bold text-purple-600 mt-2">{stats.totalUnits.toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-purple-600 mt-2">{stats.totalUnits}</p>
                     </div>
                 </div>
 
