@@ -122,10 +122,10 @@ const Budgets = () => {
         setSelectedBudget(budget);
         setFormData({
             event_name: budget.event_name,
-            analytics_id: budget.analytics_id.toString(),
+            analytics_id: (budget.analytics_id || '').toString(),
             type: budget.type,
-            budgeted_amount: budget.budgeted_amount.toString(),
-            achieved_amount: budget.achieved_amount.toString(),
+            budgeted_amount: parseFloat(budget.budgeted_amount || 0).toString(),
+            achieved_amount: parseFloat(budget.achieved_amount || 0).toString(),
             start_date: budget.start_date,
             end_date: budget.end_date,
             notes: budget.notes || ''
@@ -274,11 +274,6 @@ const Budgets = () => {
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Status
                                         </th>
-                                        {isAdmin && (
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Actions
-                                            </th>
-                                        )}
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -303,28 +298,28 @@ const Budgets = () => {
                                                     <div className="text-xs text-gray-400">to {new Date(budget.end_date).toLocaleDateString()}</div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                    ₹{budget.budgeted_amount.toLocaleString()}
+                                                    ₹{parseFloat(budget.budgeted_amount || 0).toLocaleString()}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    ₹{budget.achieved_amount.toLocaleString()}
+                                                    ₹{parseFloat(budget.achieved_amount || 0).toLocaleString()}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center">
                                                         <div className="w-full bg-gray-200 rounded-full h-2 mr-2 max-w-[100px]">
                                                             <div
-                                                                className={`h-2 rounded-full ${budget.percentage_achieved >= 100 ? 'bg-red-600' :
-                                                                        budget.percentage_achieved >= 80 ? 'bg-yellow-500' :
+                                                                className={`h-2 rounded-full ${parseFloat(budget.percentage_achieved || 0) >= 100 ? 'bg-red-600' :
+                                                                        parseFloat(budget.percentage_achieved || 0) >= 80 ? 'bg-yellow-500' :
                                                                             'bg-green-500'
                                                                     }`}
-                                                                style={{ width: `${Math.min(budget.percentage_achieved, 100)}%` }}
+                                                                style={{ width: `${Math.min(parseFloat(budget.percentage_achieved || 0), 100)}%` }}
                                                             ></div>
                                                         </div>
                                                         <span className="text-sm text-gray-600 min-w-[3.5rem]">
-                                                            {budget.percentage_achieved.toFixed(1)}%
+                                                            {parseFloat(budget.percentage_achieved || 0).toFixed(1)}%
                                                         </span>
                                                     </div>
                                                     <div className="text-xs text-gray-500 mt-1">
-                                                        Remaining: ₹{budget.amount_to_achieve.toLocaleString()}
+                                                        Remaining: ₹{parseFloat(budget.amount_to_achieve || 0).toLocaleString()}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -332,22 +327,6 @@ const Budgets = () => {
                                                         {status.text}
                                                     </span>
                                                 </td>
-                                                {isAdmin && (
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                        <button
-                                                            onClick={() => openEditModal(budget)}
-                                                            className="text-primary-600 hover:text-primary-900 mr-4"
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteBudget(budget.id)}
-                                                            className="text-red-600 hover:text-red-900"
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </td>
-                                                )}
                                             </tr>
                                         );
                                     })}
@@ -366,19 +345,19 @@ const Budgets = () => {
                     <div className="card">
                         <p className="text-sm font-medium text-gray-600">Total Income Budgets</p>
                         <p className="text-2xl font-bold text-green-600 mt-2">
-                            ₹{budgets.filter(b => b.type === 'income').reduce((sum, b) => sum + b.budgeted_amount, 0).toLocaleString()}
+                            ₹{budgets.filter(b => b.type === 'income').reduce((sum, b) => sum + parseFloat(b.budgeted_amount || 0), 0).toLocaleString()}
                         </p>
                     </div>
                     <div className="card">
                         <p className="text-sm font-medium text-gray-600">Total Expense Budgets</p>
                         <p className="text-2xl font-bold text-red-600 mt-2">
-                            ₹{budgets.filter(b => b.type === 'expense').reduce((sum, b) => sum + b.budgeted_amount, 0).toLocaleString()}
+                            ₹{budgets.filter(b => b.type === 'expense').reduce((sum, b) => sum + parseFloat(b.budgeted_amount || 0), 0).toLocaleString()}
                         </p>
                     </div>
                     <div className="card">
                         <p className="text-sm font-medium text-gray-600">Critical Budgets</p>
                         <p className="text-2xl font-bold text-red-600 mt-2">
-                            {budgets.filter(b => b.percentage_achieved >= 100).length}
+                            {budgets.filter(b => parseFloat(b.percentage_achieved || 0) >= 100).length}
                         </p>
                     </div>
                 </div>

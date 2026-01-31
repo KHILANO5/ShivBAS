@@ -16,7 +16,7 @@ const RevisedBudget = () => {
     const [formData, setFormData] = useState({
         budget_id: '',
         event_name: '',
-        type: 'expense',
+        type: '',
         revised_budgeted_amount: '',
         start_date: '',
         end_date: '',
@@ -29,19 +29,36 @@ const RevisedBudget = () => {
 
     const fetchData = async () => {
         setLoading(true);
+        console.log('Fetching budgets data...');
+        console.log('Token in localStorage:', localStorage.getItem('token') ? 'EXISTS' : 'NOT FOUND');
+        
         try {
-            const [revisedRes, budgetsRes] = await Promise.all([
-                revisedBudgetsAPI.getAll(),
-                budgetsAPI.getAll()
-            ]);
+            // Fetch budgets first
+            console.log('Calling budgetsAPI.getAll()...');
+            const budgetsRes = await budgetsAPI.getAll();
+            console.log('Budgets API Response:', budgetsRes.data);
+            const budgetsData = budgetsRes.data.data || budgetsRes.data || [];
+            setOriginalBudgets(budgetsData);
+            console.log('Original Budgets Set:', budgetsData);
 
-            setRevisedBudgets(revisedRes.data.data || []);
-            setOriginalBudgets(budgetsRes.data.data || []);
+            // Then fetch revised budgets
+            const revisedRes = await revisedBudgetsAPI.getAll();
+            console.log('Revised Budgets API Response:', revisedRes.data);
+            setRevisedBudgets(revisedRes.data.data || revisedRes.data || []);
         } catch (error) {
             console.error('Error fetching data:', error);
+            console.error('Error details:', error.response?.data);
+            alert('Error loading budgets: ' + (error.response?.data?.error || error.message));
         } finally {
             setLoading(false);
         }
+    };
+
+    // Helper to format date for input fields
+    const formatDateForInput = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toISOString().split('T')[0];
     };
 
     const handleInputChange = (e) => {
@@ -60,10 +77,9 @@ const RevisedBudget = () => {
                     budget_id: value,
                     event_name: budget.event_name,
                     type: budget.type,
-                    start_date: budget.start_date,
-                    end_date: budget.end_date,
-                    // Keep existing amounts or reset? Let's prepopulate to edit
-                    revised_budgeted_amount: budget.budgeted_amount
+                    start_date: formatDateForInput(budget.start_date),
+                    end_date: formatDateForInput(budget.end_date),
+                    revised_budgeted_amount: parseFloat(budget.budgeted_amount || 0)
                 }));
             }
         }
@@ -77,23 +93,35 @@ const RevisedBudget = () => {
             return;
         }
 
+        if (!formData.revised_budgeted_amount || parseFloat(formData.revised_budgeted_amount) <= 0) {
+            alert('Please enter a valid revised budget amount.');
+            return;
+        }
+
         const payload = {
-            ...formData,
             budget_id: parseInt(formData.budget_id),
-            revised_budgeted_amount: parseFloat(formData.revised_budgeted_amount)
+            event_name: formData.event_name,
+            type: formData.type,
+            revised_budgeted_amount: parseFloat(formData.revised_budgeted_amount),
+            start_date: formData.start_date,
+            end_date: formData.end_date,
+            revision_reason: formData.revision_reason
         };
 
         try {
             if (selectedRevision) {
                 await revisedBudgetsAPI.update(selectedRevision.id, payload);
+                alert('Revised budget updated successfully!');
             } else {
                 await revisedBudgetsAPI.create(payload);
+                alert('Revised budget created successfully!');
             }
             fetchData();
             closeModal();
         } catch (error) {
             console.error('Error saving Revision:', error);
-            alert('Failed to save Revised Budget');
+            const errorMessage = error.response?.data?.error || 'Failed to save Revised Budget';
+            alert(errorMessage);
         }
     };
 
@@ -114,9 +142,9 @@ const RevisedBudget = () => {
             budget_id: revision.budget_id,
             event_name: revision.event_name,
             type: revision.type,
-            revised_budgeted_amount: revision.revised_budgeted_amount,
-            start_date: revision.start_date,
-            end_date: revision.end_date,
+            revised_budgeted_amount: parseFloat(revision.revised_budgeted_amount || 0),
+            start_date: formatDateForInput(revision.start_date),
+            end_date: formatDateForInput(revision.end_date),
             revision_reason: revision.revision_reason
         });
         setShowEditModal(true);
@@ -129,7 +157,7 @@ const RevisedBudget = () => {
         setFormData({
             budget_id: '',
             event_name: '',
-            type: 'expense',
+            type: '',
             revised_budgeted_amount: '',
             start_date: '',
             end_date: '',
@@ -215,10 +243,10 @@ const RevisedBudget = () => {
                                             {rb.type}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            ₹{rb.original_budget_amount?.toLocaleString()}
+                                            ₹{parseFloat(rb.original_budgeted_amount || 0).toLocaleString()}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-primary-600">
-                                            ₹{rb.revised_budgeted_amount.toLocaleString()}
+                                            ₹{parseFloat(rb.revised_budgeted_amount || 0).toLocaleString()}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={rb.revision_reason}>
                                             {rb.revision_reason}
@@ -272,9 +300,9 @@ const RevisedBudget = () => {
                                         disabled={showEditModal} // Prevent changing base budget on edit
                                         required
                                     >
-                                        <option value="">Select Budget</option>
+                                        <option value="">Select Budget {originalBudgets.length === 0 ? '(Loading...)' : `(${originalBudgets.length} available)`}</option>
                                         {originalBudgets.map(b => (
-                                            <option key={b.id} value={b.id}>{b.event_name} ({b.type}) - ₹{b.budgeted_amount.toLocaleString()}</option>
+                                            <option key={b.id} value={b.id}>{b.event_name} ({b.type}) - ₹{parseFloat(b.budgeted_amount || 0).toLocaleString()}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -293,12 +321,30 @@ const RevisedBudget = () => {
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
                                         <input
                                             type="text"
-                                            value={formData.type}
-                                            className="w-full border rounded-lg px-3 py-2 bg-gray-100 capitalize"
+                                            value={formData.type ? formData.type.charAt(0).toUpperCase() + formData.type.slice(1) : ''}
+                                            className="w-full border rounded-lg px-3 py-2 bg-gray-100"
                                             readOnly
                                         />
                                     </div>
                                 </div>
+
+                                {/* Original Budget Amount - Read Only */}
+                                {formData.budget_id && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Original Budget Amount</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <span className="text-gray-500 sm:text-sm">₹</span>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={parseFloat(originalBudgets.find(b => b.id === parseInt(formData.budget_id))?.budgeted_amount || 0).toLocaleString()}
+                                                className="w-full pl-7 border rounded-lg px-3 py-2 bg-gray-100"
+                                                readOnly
+                                            />
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Revised Budget Amount</label>

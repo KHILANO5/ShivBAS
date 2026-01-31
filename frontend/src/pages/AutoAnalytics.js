@@ -1,9 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { analyticsAPI } from '../services/api';
+import { analyticsAPI, productsAPI, contactsAPI } from '../services/api';
 
 const AutoAnalytics = () => {
     const [analytics, setAnalytics] = useState([]);
+    const [filteredAnalytics, setFilteredAnalytics] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [contacts, setContacts] = useState([]);
     const [loading, setLoading] = useState(true);
+    
+    // Filter states for "Auto Apply Analytical Model"
+    const [filters, setFilters] = useState({
+        partnerTag: 'all',
+        partnerId: 'all',
+        productCategory: 'all',
+        productId: 'all'
+    });
+
+    // Matched analytics models with priority scoring
+    const [matchedModels, setMatchedModels] = useState([]);
+    const [bestMatch, setBestMatch] = useState(null);
+
     const [insights, setInsights] = useState({
         totalProfit: 0,
         totalRevenue: 0,
@@ -14,25 +30,178 @@ const AutoAnalytics = () => {
     });
 
     useEffect(() => {
-        fetchAnalytics();
+        fetchData();
     }, []);
 
-    const fetchAnalytics = async () => {
+    // Apply Auto Analytical Model matching whenever filters change
+    useEffect(() => {
+        findMatchingModels();
+    }, [filters, analytics, products, contacts]);
+
+    const fetchData = async () => {
         setLoading(true);
         try {
-            const response = await analyticsAPI.getAll();
-            const data = response.data.data || [];
+            const [analyticsResponse, productsResponse, contactsResponse] = await Promise.all([
+                analyticsAPI.getAll(),
+                productsAPI.getAll(),
+                contactsAPI.getAll()
+            ]);
+            
+            const data = analyticsResponse.data.data || [];
             setAnalytics(data);
+            setFilteredAnalytics(data);
+            setProducts((productsResponse.data.data || []).filter(p => p.status === 'active'));
+            setContacts((contactsResponse.data.data || []).filter(c => c.status === 'active'));
             calculateInsights(data);
         } catch (error) {
-            console.error('Error fetching analytics:', error);
+            console.error('Error fetching data:', error);
         } finally {
             setLoading(false);
         }
     };
 
+    /**
+     * Auto Apply Analytical Model Logic:
+     * - The model is applied if any one field matches the transaction line
+     * - If multiple fields match, the model becomes more specific and takes priority
+     * - Models with fewer matched fields are more generic, while more matches make them stricter
+     * 
+     * Priority Weights:
+     * - Product ID match: 4 points (most specific)
+     * - Partner ID match: 3 points (very specific)
+     * - Product Category match: 2 points (category level)
+     * - Partner Tag match: 1 point (most generic)
+     * 
+     * Total possible score: 10 points
+     */
+    const findMatchingModels = () => {
+        if (!analytics.length) {
+            setMatchedModels([]);
+            setBestMatch(null);
+            setFilteredAnalytics([]);
+            return;
+        }
+
+        // If no filters selected, show all analytics
+        const hasAnyFilter = filters.partnerTag !== 'all' || 
+                            filters.partnerId !== 'all' || 
+                            filters.productCategory !== 'all' || 
+                            filters.productId !== 'all';
+
+        if (!hasAnyFilter) {
+            setMatchedModels([]);
+            setBestMatch(null);
+            setFilteredAnalytics(analytics);
+            calculateInsights(analytics);
+            return;
+        }
+
+        const scoredModels = analytics.map(model => {
+            let score = 0;
+            let matchedFields = [];
+
+            // Check Partner Tag match (1 point - most generic)
+            if (filters.partnerTag !== 'all' && model.partner_tag === filters.partnerTag) {
+                score += 1;
+                matchedFields.push('Partner Tag');
+            }
+
+            // Check Product Category match (2 points)
+            if (filters.productCategory !== 'all' && model.product_category === filters.productCategory) {
+                score += 2;
+                matchedFields.push('Product Category');
+            }
+
+            // Check Partner ID match (3 points - very specific)
+            if (filters.partnerId !== 'all' && model.partner_id === parseInt(filters.partnerId)) {
+                score += 3;
+                matchedFields.push('Partner');
+            }
+
+            // Check Product ID match (4 points - most specific)
+            if (filters.productId !== 'all' && model.product_id === parseInt(filters.productId)) {
+                score += 4;
+                matchedFields.push('Product');
+            }
+
+            return {
+                ...model,
+                matchScore: score,
+                matchedFields: matchedFields,
+                matchCount: matchedFields.length
+            };
+        });
+
+        // Filter models that have at least one match
+        const matched = scoredModels
+            .filter(m => m.matchScore > 0)
+            .sort((a, b) => {
+                // Sort by score descending (higher score = more specific = higher priority)
+                if (b.matchScore !== a.matchScore) {
+                    return b.matchScore - a.matchScore;
+                }
+                // If same score, sort by profit descending
+                return parseFloat(b.profit || 0) - parseFloat(a.profit || 0);
+            });
+
+        setMatchedModels(matched);
+        setBestMatch(matched.length > 0 ? matched[0] : null);
+        setFilteredAnalytics(matched);
+        calculateInsights(matched);
+    };
+
+    const handleFilterChange = (e) => {
+        const { name, value } = e.target;
+        setFilters(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    // Reset all filters
+    const resetFilters = () => {
+        setFilters({
+            partnerTag: 'all',
+            partnerId: 'all',
+            productCategory: 'all',
+            productId: 'all'
+        });
+    };
+
+    // Get unique categories from products
+    const getCategories = () => {
+        const categories = [...new Set(products.map(item => item.category).filter(Boolean))];
+        return categories;
+    };
+
+    // Get filtered partners based on partner tag
+    const getFilteredPartners = () => {
+        if (filters.partnerTag === 'all') return contacts;
+        if (filters.partnerTag === 'customer') {
+            return contacts.filter(c => c.type === 'customer');
+        }
+        if (filters.partnerTag === 'supplier') {
+            return contacts.filter(c => c.type === 'vendor');
+        }
+        return contacts;
+    };
+
+    // Get filtered products based on category
+    const getFilteredProducts = () => {
+        if (filters.productCategory === 'all') return products;
+        return products.filter(p => p.category === filters.productCategory);
+    };
+
     const calculateInsights = (data) => {
         if (!data || data.length === 0) {
+            setInsights({
+                totalProfit: 0,
+                totalRevenue: 0,
+                avgProfitMargin: 0,
+                topProduct: null,
+                topPartner: null,
+                profitTrend: 'stable'
+            });
             return;
         }
 
@@ -78,7 +247,7 @@ const AutoAnalytics = () => {
 
     const getProductCategoryDistribution = () => {
         const categories = {};
-        analytics.forEach(item => {
+        filteredAnalytics.forEach(item => {
             const category = item.product_category || 'Unknown';
             categories[category] = (categories[category] || 0) + 1;
         });
@@ -87,7 +256,7 @@ const AutoAnalytics = () => {
 
     const getPartnerTypeDistribution = () => {
         const types = { supplier: 0, customer: 0 };
-        analytics.forEach(item => {
+        filteredAnalytics.forEach(item => {
             if (item.partner_tag) {
                 types[item.partner_tag]++;
             }
@@ -137,6 +306,174 @@ const AutoAnalytics = () => {
                     <p className="mt-2 text-sm text-gray-600">
                         Automated insights and predictions based on your analytics data
                     </p>
+                </div>
+
+                {/* Filter Section */}
+                <div className="card mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        {/* Partner Tag */}
+                        <div>
+                            <label className="block text-sm font-medium text-rose-600 mb-2">Partner Tag</label>
+                            <select
+                                name="partnerTag"
+                                value={filters.partnerTag}
+                                onChange={handleFilterChange}
+                                className="input-field"
+                            >
+                                <option value="all">Many to One (from list)</option>
+                                <option value="customer">Customer</option>
+                                <option value="supplier">Supplier</option>
+                            </select>
+                        </div>
+
+                        {/* Partner */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Partner</label>
+                            <select
+                                name="partnerId"
+                                value={filters.partnerId}
+                                onChange={handleFilterChange}
+                                className="input-field"
+                            >
+                                <option value="all">Many to One (from list)</option>
+                                {getFilteredPartners().map(partner => (
+                                    <option key={partner.id} value={partner.id}>
+                                        {partner.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Product Category */}
+                        <div>
+                            <label className="block text-sm font-medium text-rose-600 mb-2">Product Category</label>
+                            <select
+                                name="productCategory"
+                                value={filters.productCategory}
+                                onChange={handleFilterChange}
+                                className="input-field"
+                            >
+                                <option value="all">Many to One (from list)</option>
+                                {getCategories().map(category => (
+                                    <option key={category} value={category}>
+                                        {category}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Product */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Product</label>
+                            <select
+                                name="productId"
+                                value={filters.productId}
+                                onChange={handleFilterChange}
+                                className="input-field"
+                            >
+                                <option value="all">Many to One (from list)</option>
+                                {getFilteredProducts().map(product => (
+                                    <option key={product.id} value={product.id}>
+                                        {product.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Auto Apply Analytical Model - Matching Results */}
+                    <div className="border-t pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-medium text-gray-900 underline">Auto Apply Analytical Model</h4>
+                            <button
+                                onClick={resetFilters}
+                                className="text-sm text-primary-600 hover:text-primary-800 font-medium"
+                            >
+                                Reset Filters
+                            </button>
+                        </div>
+
+                        {/* Matching Logic Explanation */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                            <p className="text-xs text-blue-700">
+                                <strong>Matching Priority:</strong> Product (4pts) → Partner (3pts) → Category (2pts) → Partner Tag (1pt). 
+                                More matches = stricter rule, fewer matches = more generic.
+                            </p>
+                        </div>
+
+                        {/* Best Match Display */}
+                        {bestMatch ? (
+                            <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 mb-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 bg-green-500 rounded-full flex items-center justify-center">
+                                            <span className="text-white font-bold">✓</span>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-green-800">Best Match Found</p>
+                                            <p className="text-lg font-bold text-green-900">{bestMatch.event_name}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-2xl font-bold text-green-600">{bestMatch.matchScore}</span>
+                                            <span className="text-sm text-green-600">/10 pts</span>
+                                        </div>
+                                        <p className="text-xs text-green-700">{bestMatch.matchCount} field(s) matched</p>
+                                    </div>
+                                </div>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {bestMatch.matchedFields.map((field, idx) => (
+                                        <span key={idx} className="px-2 py-1 bg-green-200 text-green-800 text-xs font-medium rounded-full">
+                                            ✓ {field}
+                                        </span>
+                                    ))}
+                                </div>
+                                <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                                    <div><span className="text-gray-600">Product:</span> <strong>{bestMatch.product_name || 'N/A'}</strong></div>
+                                    <div><span className="text-gray-600">Partner:</span> <strong>{bestMatch.partner_name || 'N/A'}</strong></div>
+                                    <div><span className="text-gray-600">Category:</span> <strong>{bestMatch.product_category || 'N/A'}</strong></div>
+                                    <div><span className="text-gray-600">Profit:</span> <strong className="text-green-600">₹{parseFloat(bestMatch.profit || 0).toLocaleString()}</strong></div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 text-center">
+                                <p className="text-gray-600">Select filters above to find matching analytics models</p>
+                            </div>
+                        )}
+
+                        {/* All Matched Models */}
+                        {matchedModels.length > 1 && (
+                            <div>
+                                <h5 className="text-sm font-medium text-gray-700 mb-2">Other Matching Models ({matchedModels.length - 1})</h5>
+                                <div className="max-h-48 overflow-y-auto space-y-2">
+                                    {matchedModels.slice(1).map((model, idx) => (
+                                        <div key={model.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center text-sm font-bold text-gray-600">
+                                                    {idx + 2}
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium text-gray-900">{model.event_name}</p>
+                                                    <div className="flex gap-1 mt-1">
+                                                        {model.matchedFields.map((field, fidx) => (
+                                                            <span key={fidx} className="px-1.5 py-0.5 bg-gray-200 text-gray-700 text-xs rounded">
+                                                                {field}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-lg font-bold text-gray-600">{model.matchScore}</span>
+                                                <span className="text-xs text-gray-500">/10</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Key Insights */}
@@ -242,7 +579,7 @@ const AutoAnalytics = () => {
                         <h3 className="text-lg font-bold text-gray-900 mb-4">📊 Product Categories</h3>
                         <div className="space-y-3">
                             {categoryDistribution.map((category, index) => {
-                                const percentage = (category.count / analytics.length) * 100;
+                                const percentage = filteredAnalytics.length > 0 ? (category.count / filteredAnalytics.length) * 100 : 0;
                                 return (
                                     <div key={index}>
                                         <div className="flex items-center justify-between mb-1">
@@ -267,7 +604,7 @@ const AutoAnalytics = () => {
                     <h3 className="text-lg font-bold text-gray-900 mb-4">👥 Partner Distribution</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {partnerDistribution.map((partner, index) => {
-                            const percentage = analytics.length > 0 ? (partner.count / analytics.length) * 100 : 0;
+                            const percentage = filteredAnalytics.length > 0 ? (partner.count / filteredAnalytics.length) * 100 : 0;
                             return (
                                 <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                                     <div className="flex items-center space-x-4">
@@ -323,7 +660,7 @@ const AutoAnalytics = () => {
                 </div>
 
                 {/* Info Note */}
-                {analytics.length === 0 && (
+                {filteredAnalytics.length === 0 && (
                     <div className="card bg-yellow-50 border border-yellow-200 mt-8">
                         <div className="flex items-center">
                             <svg className="h-6 w-6 text-yellow-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
@@ -332,7 +669,9 @@ const AutoAnalytics = () => {
                             <div>
                                 <p className="font-medium text-yellow-900">No Analytics Data Available</p>
                                 <p className="text-sm text-yellow-700 mt-1">
-                                    Add analytics events to see automated insights and recommendations.
+                                    {analytics.length === 0 
+                                        ? 'Add analytics events to see automated insights and recommendations.'
+                                        : 'No data matches the selected filters. Try adjusting your filter criteria.'}
                                 </p>
                             </div>
                         </div>

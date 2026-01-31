@@ -9,6 +9,7 @@ const { testConnection } = require('../config/database');
 const authRoutes = require('./routes/authRoutes');
 const masterDataRoutes = require('./routes/masterDataRoutes');
 const budgetsRoutes = require('./routes/budgetsRoutes');
+const revisedBudgetsRoutes = require('./routes/revisedBudgetsRoutes');
 const transactionsRoutes = require('./routes/transactionsRoutes');
 const paymentsRoutes = require('./routes/paymentsRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
@@ -62,6 +63,9 @@ app.use('/api', masterDataRoutes);
 
 // Budgets Routes
 app.use('/api/budgets', budgetsRoutes);
+
+// Revised Budgets Routes
+app.use('/api/revised-budgets', revisedBudgetsRoutes);
 
 // Transactions Routes (Invoices & Bills)
 app.use('/api/transactions', transactionsRoutes);

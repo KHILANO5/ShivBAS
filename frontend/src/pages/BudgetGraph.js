@@ -264,7 +264,7 @@ const BudgetGraph = () => {
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {revisedBudgets.map(revision => {
-                                        const original = revision.original_budget_amount || 0;
+                                        const original = revision.original_budgeted_amount || 0;
                                         const change = parseFloat(revision.revised_budgeted_amount) - parseFloat(original);
                                         return (
                                             <tr key={revision.id} className="text-sm">
