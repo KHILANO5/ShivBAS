@@ -15,7 +15,6 @@ const Login = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false);
 
     const handleChange = (e) => {
         setFormData({
@@ -55,8 +54,7 @@ const Login = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     login_id: formData.login_id,
-                    password: formData.password,
-                    remember: rememberMe
+                    password: formData.password
                 })
             });
             const data = await response.json();
@@ -168,21 +166,6 @@ const Login = () => {
                                         </svg>
                                     )}
                                 </button>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                                <input
-                                    id="remember-me"
-                                    type="checkbox"
-                                    checked={rememberMe}
-                                    onChange={(e) => setRememberMe(e.target.checked)}
-                                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                                />
-                                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                                    Remember me for 30 days
-                                </label>
                             </div>
                         </div>
 
