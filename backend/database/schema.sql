@@ -1,9 +1,3 @@
--- ============================================================================
--- ShivBAS Database Schema (UPDATED)
--- 24-Hour Hackathon Edition with Analytics, Events, and Profit Tracking
--- Created: 2026-01-31
--- ============================================================================
-
 DROP DATABASE IF EXISTS shivbas_db;
 CREATE DATABASE shivbas_db;
 USE shivbas_db;
@@ -239,6 +233,28 @@ CREATE TABLE IF NOT EXISTS invoice_line_items (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
+-- PURCHASE ORDERS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS purchase_orders (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  po_number VARCHAR(50) UNIQUE NOT NULL COMMENT 'Auto-generated purchase order number',
+  vendor_id INT NOT NULL COMMENT 'FK to contacts table (type=vendor)',
+  order_date DATE NOT NULL COMMENT 'Date when order was placed',
+  expected_date DATE COMMENT 'Expected delivery date',
+  total_amount DECIMAL(15, 2) DEFAULT 0 COMMENT 'Total order amount',
+  status ENUM('draft', 'sent', 'received', 'cancelled') DEFAULT 'draft' COMMENT 'Order status',
+  notes TEXT COMMENT 'Additional notes or instructions',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (vendor_id) REFERENCES contacts(id),
+  INDEX idx_po_number (po_number),
+  INDEX idx_vendor_id (vendor_id),
+  INDEX idx_order_date (order_date),
+  INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
 -- TRANSACTIONS (PURCHASE BILLS)
 -- ============================================================================
 
@@ -281,6 +297,27 @@ CREATE TABLE IF NOT EXISTS bill_line_items (
   FOREIGN KEY (bill_id) REFERENCES vendor_bills(id) ON DELETE CASCADE,
   FOREIGN KEY (product_id) REFERENCES products(id),
   INDEX idx_bill_id (bill_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Alternative purchase_bills table structure (simplified version)
+-- This can be used if vendor_bills is not sufficient for specific use cases
+CREATE TABLE IF NOT EXISTS purchase_bills (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  bill_number VARCHAR(50) UNIQUE NOT NULL COMMENT 'Bill identification number',
+  vendor_id INT COMMENT 'FK to contacts table (type=vendor)',
+  bill_date DATE NOT NULL COMMENT 'Bill date',
+  due_date DATE COMMENT 'Payment due date',
+  total_amount DECIMAL(12, 2) DEFAULT 0 COMMENT 'Total bill amount',
+  status ENUM('draft', 'posted', 'cancelled') DEFAULT 'draft' COMMENT 'Bill status',
+  payment_status ENUM('not_paid', 'partial_paid', 'paid') DEFAULT 'not_paid' COMMENT 'Payment status',
+  notes TEXT COMMENT 'Additional notes',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (vendor_id) REFERENCES contacts(id) ON DELETE SET NULL,
+  INDEX idx_bill_number (bill_number),
+  INDEX idx_vendor_id (vendor_id),
+  INDEX idx_status (status),
+  INDEX idx_payment_status (payment_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================

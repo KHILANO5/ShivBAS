@@ -1,9 +1,4 @@
 -- ============================================================================
--- ShivBAS Database Seed Data (Demo Data for 24-Hour Hackathon)
--- Created: 2026-01-31
--- ============================================================================
-
--- ============================================================================
 -- USERS (Authentication)
 -- ============================================================================
 
@@ -81,10 +76,10 @@ INSERT INTO budget_graph (budget_id, event_name, total_expense, predicted_expens
 -- CUSTOMER INVOICES
 -- ============================================================================
 
-INSERT INTO customer_invoices (customer_id, analytics_id, created_by_user_id, total_amount, status, payment_status, posted_at) VALUES
-(1, 2, 1, 2000.00, 'posted', 'not_paid', '2026-01-15 10:30:00'),
-(2, 3, 1, 5000.00, 'posted', 'partial', '2026-01-20 14:15:00'),
-(1, 2, 1, 1500.00, 'draft', 'not_paid', NULL);
+INSERT INTO customer_invoices (invoice_no, invoice_reference, customer_id, analytics_id, created_by_user_id, invoice_date, due_date, total_amount, status, payment_status, posted_at) VALUES
+('INV-20260115-001', 'PO-CUST-001', 1, 2, 1, '2026-01-15', '2026-02-15', 2000.00, 'posted', 'not_paid', '2026-01-15 10:30:00'),
+('INV-20260120-002', 'PO-CUST-002', 2, 3, 1, '2026-01-20', '2026-02-20', 5000.00, 'posted', 'partial', '2026-01-20 14:15:00'),
+('INV-20260125-003', NULL, 1, 2, 1, '2026-01-25', '2026-02-25', 1500.00, 'draft', 'not_paid', NULL);
 
 -- ============================================================================
 -- INVOICE LINE ITEMS
@@ -96,12 +91,23 @@ INSERT INTO invoice_line_items (invoice_id, product_id, quantity, unit_price, ta
 (3, 1, 1, 500.00, 90.00);   -- Premium Wood: 1 unit * 500 = 500, tax = 500 * 0.18 = 90
 
 -- ============================================================================
+-- PURCHASE ORDERS
+-- ============================================================================
+
+INSERT INTO purchase_orders (po_number, vendor_id, order_date, expected_date, total_amount, status, notes) VALUES
+('PO-2026-001', 3, '2026-01-20', '2026-02-01', 15000.00, 'sent', 'Quarterly wood supplies order'),
+('PO-2026-002', 4, '2026-01-25', '2026-02-05', 5000.00, 'draft', 'Metal components for upcoming project'),
+('PO-2026-003', 3, '2026-01-28', '2026-02-10', 8000.00, 'sent', 'Fabric materials order'),
+('PO-2026-004', 4, '2026-01-30', '2026-02-15', 12000.00, 'received', 'Aluminum supplies - delivered early');
+
+-- ============================================================================
 -- VENDOR BILLS
 -- ============================================================================
 
-INSERT INTO vendor_bills (vendor_id, analytics_id, created_by_user_id, total_amount, status, payment_status, posted_at) VALUES
-(3, 1, 1, 3000.00, 'posted', 'not_paid', '2026-01-10 09:00:00'),
-(4, 5, 1, 1200.00, 'posted', 'paid', '2026-01-18 11:30:00');
+INSERT INTO vendor_bills (bill_no, bill_reference, vendor_id, analytics_id, created_by_user_id, bill_date, due_date, total_amount, status, payment_status, posted_at) VALUES
+('BILL-20260110-001', 'ABC-INV-2026-001', 3, 1, 1, '2026-01-10', '2026-02-10', 3000.00, 'posted', 'not_paid', '2026-01-10 09:00:00'),
+('BILL-20260118-002', 'XYZ-INV-2026-012', 4, 5, 1, '2026-01-18', '2026-02-18', 1200.00, 'posted', 'paid', '2026-01-18 11:30:00'),
+('BILL-20260122-003', 'ABC-INV-2026-005', 3, 1, 1, '2026-01-22', '2026-02-22', 2500.00, 'posted', 'not_paid', '2026-01-22 15:45:00');
 
 -- ============================================================================
 -- BILL LINE ITEMS
@@ -109,7 +115,8 @@ INSERT INTO vendor_bills (vendor_id, analytics_id, created_by_user_id, total_amo
 
 INSERT INTO bill_line_items (bill_id, product_id, quantity, unit_price, tax_amount) VALUES
 (1, 1, 2, 500.00, 180.00),  -- Premium Wood: 2 units * 500 = 1000, tax = 180
-(2, 5, 4, 150.00, 108.00);  -- Aluminum Legs: 4 units * 150 = 600, tax = 108
+(2, 5, 4, 150.00, 108.00),  -- Aluminum Legs: 4 units * 150 = 600, tax = 108
+(3, 1, 3, 500.00, 270.00);  -- Premium Wood: 3 units * 500 = 1500, tax = 270
 
 -- ============================================================================
 -- PAYMENTS
@@ -118,7 +125,18 @@ INSERT INTO bill_line_items (bill_id, product_id, quantity, unit_price, tax_amou
 INSERT INTO payments (invoice_id, bill_id, amount_paid, payment_mode, transaction_id, status, payment_date) VALUES
 (1, NULL, 1000.00, 'bank', 'TXN123456', 'completed', '2026-01-16'),
 (2, NULL, 2500.00, 'upi', 'UPI789012', 'completed', '2026-01-22'),
-(NULL, 2, 1200.00, 'bank', 'BILL456789', 'completed', '2026-01-19');
+(NULL, 2, 1200.00, 'bank', 'BILL456789', 'completed', '2026-01-19'),
+(2, NULL, 2500.00, 'gateway', 'RAZORPAY_TXN_456', 'completed', '2026-01-23');
+
+-- ============================================================================
+-- PURCHASE BILLS (Simplified Structure)
+-- ============================================================================
+
+INSERT INTO purchase_bills (bill_number, vendor_id, bill_date, due_date, total_amount, status, payment_status, notes) VALUES
+('PBILL-00001', 3, '2026-01-15', '2026-02-15', 15000.00, 'posted', 'not_paid', 'Monthly supplies bill'),
+('PBILL-00002', 4, '2026-01-26', '2026-02-26', 8500.00, 'posted', 'paid', 'Equipment maintenance'),
+('PBILL-00003', 3, '2026-01-28', '2026-02-13', 3200.00, 'draft', 'not_paid', 'Pending approval'),
+('PBILL-00004', 4, '2026-01-30', '2026-03-01', 6700.00, 'posted', 'partial_paid', 'Partially paid - balance remaining');
 
 -- ============================================================================
 -- AUTO ANALYTICAL MODELS (Rules)
