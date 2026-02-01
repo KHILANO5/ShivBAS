@@ -37,7 +37,11 @@ const Login = () => {
         setLoading(false);
 
         if (result.success) {
-            navigate('/dashboard');
+            if (result.user?.role === 'portal') {
+                navigate('/portal/dashboard');
+            } else {
+                navigate('/dashboard');
+            }
         } else {
             setError(result.error);
         }

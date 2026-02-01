@@ -80,51 +80,53 @@ const Navbar = () => {
                         </button>
                     </div>
 
-                    {/* Menu Items */}
-                    <div className="flex items-center space-x-1">
-                        {Object.entries(menuItems).map(([key, menu]) => (
-                            <div key={key} className="relative">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleDropdown(key);
-                                    }}
-                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${openDropdown === key
-                                        ? 'bg-gray-800 text-white'
-                                        : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                                        }`}
-                                >
-                                    <span className="flex items-center">
-                                        {menu.title}
-                                        <svg
-                                            className={`ml-2 h-4 w-4 transition-transform ${openDropdown === key ? 'rotate-180' : ''
-                                                }`}
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                        >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </span>
-                                </button>
-
-                                {/* Dropdown Menu */}
-                                {openDropdown === key && (
-                                    <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
-                                        {menu.items.map((item, index) => (
-                                            <button
-                                                key={index}
-                                                onClick={() => handleNavigation(item.path)}
-                                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                    {/* Menu Items - Only for Admin */}
+                    {isAdmin && (
+                        <div className="flex items-center space-x-1">
+                            {Object.entries(menuItems).map(([key, menu]) => (
+                                <div key={key} className="relative">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleDropdown(key);
+                                        }}
+                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${openDropdown === key
+                                            ? 'bg-gray-800 text-white'
+                                            : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                                            }`}
+                                    >
+                                        <span className="flex items-center">
+                                            {menu.title}
+                                            <svg
+                                                className={`ml-2 h-4 w-4 transition-transform ${openDropdown === key ? 'rotate-180' : ''
+                                                    }`}
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
                                             >
-                                                {item.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </span>
+                                    </button>
+
+                                    {/* Dropdown Menu */}
+                                    {openDropdown === key && (
+                                        <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                                            {menu.items.map((item, index) => (
+                                                <button
+                                                    key={index}
+                                                    onClick={() => handleNavigation(item.path)}
+                                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                                                >
+                                                    {item.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Right Side - User Profile */}
                     <div className="flex items-center space-x-4">

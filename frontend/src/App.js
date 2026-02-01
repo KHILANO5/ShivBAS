@@ -23,6 +23,7 @@ import SaleOrder from './pages/SaleOrder';
 import Receipt from './pages/Receipt';
 import AutoAnalytics from './pages/AutoAnalytics';
 import DashboardDirect from './pages/DashboardDirect';
+import UserDashboard from './pages/UserDashboard';
 import Layout from './components/Layout';
 
 function App() {
@@ -36,6 +37,18 @@ function App() {
 
           {/* Direct Dashboard Demo (No Login Required) */}
           <Route path="/demo" element={<DashboardDirect />} />
+
+          {/* User Dashboard - Portal Users */}
+          <Route
+            path="/portal/dashboard"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <UserDashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
 
           {/* Protected Routes */}
           <Route

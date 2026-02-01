@@ -886,3 +886,67 @@ const MOCK_ANALYTIC_RULES = [
         priority_score: 1
     }
 ];
+
+// Add Invoices Data
+const MOCK_INVOICES = [
+    {
+        id: 1,
+        total_amount: 5000,
+        status: 'posted',
+        payment_status: 'paid',
+        created_at: '2026-01-20T10:00:00Z',
+        line_items: []
+    },
+    {
+        id: 2,
+        total_amount: 7500,
+        status: 'posted',
+        payment_status: 'partial',
+        created_at: '2026-01-25T14:30:00Z',
+        line_items: []
+    },
+    {
+        id: 3,
+        total_amount: 12000,
+        status: 'draft',
+        payment_status: 'not_paid',
+        created_at: '2026-01-30T09:15:00Z',
+        line_items: []
+    }
+];
+
+// Extend mockAPI with missing methods
+Object.assign(mockAPI, {
+    getInvoices: async () => {
+        await delay(300);
+        return {
+            data: {
+                success: true,
+                data: { invoices: MOCK_INVOICES }
+            }
+        };
+    },
+    getPayments: async () => {
+        await delay(300);
+        return {
+            data: {
+                success: true,
+                data: { payments: MOCK_PAYMENTS }
+            }
+        };
+    },
+    payInvoice: async (data) => {
+        await delay(500);
+        const inv = MOCK_INVOICES.find(i => i.id === data.invoice_id);
+        if (inv) {
+            inv.payment_status = 'paid';
+            inv.status = 'posted';
+        }
+        return {
+            data: {
+                success: true,
+                message: 'Payment recorded successfully'
+            }
+        };
+    }
+});
