@@ -17,9 +17,8 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   enableKeepAlive: true,
-  keepAliveInitialDelayMs: 0,
-  charset: 'utf8mb4',
-  collation: 'utf8mb4_unicode_ci'
+  keepAliveInitialDelay: 0,
+  charset: 'utf8mb4'
 });
 
 // Test database connection on startup
@@ -44,12 +43,9 @@ const testConnection = async () => {
   } catch (error) {
     console.error('❌ Database Connection Failed:', error.message);
     console.error('Make sure MySQL is running and .env variables are correct');
-    process.exit(1);
+    throw error;
   }
 };
-
-// Execute connection test on module load
-testConnection();
 
 /**
  * Execute a query

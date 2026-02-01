@@ -1,92 +1,302 @@
-# ShivBAS — Shiv Budget Accounting System
+# 🎯 ShivBAS - Budget & Analytics System
 
-## 📋 Project Overview
+<div align="center">
 
-**ShivBAS** is a web-based mini ERP system designed for Shiv Furniture to track budget accounting and financial monitoring. The system provides:
+**A Full-Stack Financial Management Application**
 
-- **Budget Tracking** — Monitor budgets per event/cost center with real-time actual vs. budgeted metrics
-- **Transaction Management** — Create and post sales invoices and purchase bills
-- **Event-Based Analytics** — Track partner interactions (suppliers/customers) with profit calculations
-- **Admin Dashboard** — Visualize budget metrics, expenses, and profits with charts and alerts
-- **Customer Portal** — Self-service access to invoices, payments, and order history
-- **Automated Rules** — Auto-assign events to transactions based on product categories or vendors
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/React-19.x-61DAFB?style=flat-square&logo=react&logoColor=black)](https://reactjs.org/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://mysql.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.x-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+
+</div>
 
 ---
 
-## 🏗️ Architecture
+## 📋 Overview
 
-### Tech Stack
-- **Frontend**: React + Tailwind CSS + Vite
-- **Backend**: Node.js + Express.js
-- **Database**: MySQL 8.0+
-- **Authentication**: JWT + bcrypt
-- **Payment**: Test Mode (Gateway Integration Ready)
+**ShivBAS** is a comprehensive budget management, analytics tracking, and financial reporting system designed for businesses to manage their finances efficiently.
 
-### Database Tables (15)
-1. users, password_tokens, contacts, products
-2. analytics (event tracking)
-3. budgets, revised_budget, budget_graph
-4. customer_invoices, invoice_line_items
-5. vendor_bills, bill_line_items
-6. payments, auto_analytical_models, audit_logs
+### ✨ Key Highlights
+
+| Feature | Description |
+|---------|-------------|
+| 🔐 **Authentication** | JWT-based secure login with role-based access (Admin/Customer) |
+| 📊 **Analytics** | Real-time dashboards with charts and insights |
+| 💰 **Budget Management** | Create, track, and revise budgets |
+| 📄 **Invoicing** | Generate customer invoices and purchase bills |
+| 💳 **Payments** | Integrated payment gateway with balance tracking |
+| 📧 **Email Notifications** | Beautiful HTML emails on login |
+| 👥 **Customer Portal** | Dedicated portal for customers |
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Setup Database
+### Prerequisites
 
+- **Node.js** 18.x or higher
+- **MySQL** 8.0 or higher
+- **npm** or **yarn**
+
+### Installation
+
+#### 1️⃣ Clone Repository
 ```bash
+git clone https://github.com/KHILANO5/ShivBAS.git
+cd ShivBAS
+```
+
+#### 2️⃣ Setup Database
+```bash
+# Login to MySQL
 mysql -u root -p
+
+# Create and setup database
 CREATE DATABASE shivbas_db;
 USE shivbas_db;
 SOURCE backend/database/schema.sql;
 SOURCE backend/database/seed.sql;
-SHOW TABLES;
 ```
 
-### 2. Setup Backend
-
+#### 3️⃣ Configure Backend
 ```bash
 cd backend
 npm install
+
+# Create .env file
 cp .env.example .env
-# Edit .env with your MySQL credentials
-npm run dev
+# Edit .env with your database credentials
 ```
 
-### 3. Setup Frontend
+**.env Configuration:**
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=shivbas_db
+JWT_SECRET=your_secret_key
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_app_password
+```
 
+#### 4️⃣ Configure Frontend
 ```bash
 cd frontend
 npm install
-cp .env.example .env
-npm run dev
-# Open http://localhost:3000
+```
+
+#### 5️⃣ Start Application
+```bash
+# Terminal 1 - Backend
+cd backend
+npm start
+# Server runs on http://localhost:5000
+
+# Terminal 2 - Frontend
+cd frontend
+npm start
+# App runs on http://localhost:3000
+```
+
+### 🔑 Default Login Credentials
+
+| Role | Login ID | Password |
+|------|----------|----------|
+| Admin | `admin_user` | `Test@123` |
+
+---
+
+## 🛠️ Technology Stack
+
+### Frontend
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| React | 19.x | UI Framework |
+| React Router | 7.x | Navigation |
+| Axios | 1.x | HTTP Client |
+| Tailwind CSS | 3.x | Styling |
+| Recharts | 2.x | Charts & Graphs |
+
+### Backend
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Node.js | 18+ | Runtime |
+| Express.js | 4.x | Web Framework |
+| MySQL2 | 3.x | Database Driver |
+| JWT | - | Authentication |
+| Nodemailer | 6.x | Email Service |
+
+---
+
+## 📁 Project Structure
+
+```
+ShivBAS/
+├── backend/
+│   ├── config/
+│   │   └── database.js          # MySQL connection pool
+│   ├── database/
+│   │   ├── schema.sql           # Database schema
+│   │   └── seed.sql             # Sample data
+│   ├── src/
+│   │   ├── controllers/         # Business logic
+│   │   ├── routes/              # API endpoints
+│   │   ├── middleware/          # Auth middleware
+│   │   ├── utils/               # Email, JWT helpers
+│   │   └── server.js            # Entry point
+│   ├── .env.example
+│   └── package.json
+│
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── components/          # Reusable components
+│   │   ├── context/             # React Context
+│   │   ├── pages/               # Page components
+│   │   │   ├── customer/        # Customer Portal
+│   │   │   └── ...
+│   │   ├── services/            # API service layer
+│   │   ├── App.js
+│   │   └── index.js
+│   └── package.json
+│
+└── readme.md
 ```
 
 ---
 
-## 📊 Demo Login
+## 📊 Features
 
-**Login ID**: admin_user  
-**Password**: Test@123
+### 🏠 Dashboard
+- Real-time analytics overview
+- Budget vs Actual comparison
+- Recent transactions
+- Quick action buttons
+
+### 💰 Budget Management
+- Create annual/monthly budgets
+- Track budget utilization
+- Revised budget support
+- Budget category management
+
+### 📄 Invoice & Billing
+- Customer invoice generation
+- Purchase bill management
+- Sale orders & Purchase orders
+- PDF export functionality
+
+### 💳 Payment Gateway
+- Payment processing
+- Payment history tracking
+- Partial payment support
+- Balance calculation
+
+### 👥 Customer Portal
+- Customer self-service
+- View invoices & orders
+- Make payments
+- Track payment history
+
+### 📧 Email Notifications
+- Beautiful HTML welcome emails
+- Login notifications
+- Branded email templates
 
 ---
 
-## 📈 Features
+## 🔌 API Endpoints
 
-✅ Event-based budget tracking (income/expense)  
-✅ Real-time budget vs actual metrics  
-✅ Partner tracking (suppliers/customers)  
-✅ Profit calculation per event  
-✅ Invoice & payment management  
-✅ Admin dashboard with charts & alerts  
-✅ Customer portal (self-service)  
-✅ Auto-assign events via rules  
-✅ Revised budget tracking  
-✅ Audit logging
+### Authentication
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/login` | User login |
+| POST | `/api/auth/logout` | User logout |
+
+### Master Data
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET/POST | `/api/products` | Product management |
+| GET/POST | `/api/contacts` | Contact management |
+
+### Transactions
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET/POST | `/api/budgets` | Budget operations |
+| GET/POST | `/api/customer-invoices` | Invoice operations |
+| GET/POST | `/api/purchase-bills` | Bill operations |
+| GET/POST | `/api/payments` | Payment operations |
+
+### Payments
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/razorpay/direct-payment` | Process payment |
+| GET | `/api/razorpay/balance/:type/:id` | Get balance |
 
 ---
 
-**For detailed documentation, see `backend/database/schema.sql` and `backend/.env.example`**
+## 👥 Team
+
+| Name | Role | Contributions |
+|------|------|---------------|
+| **Yash** | Mentor | Technical guidance & oversight |
+| **Khilan** | Database Lead | Schema design, 23 tables, relationships |
+| **Pruthvi** | Frontend Lead | React UI/UX, 20+ pages |
+| **Nishit** | Backend Lead | API development, integrations |
+
+---
+
+## 📈 Project Stats
+
+| Metric | Count |
+|--------|-------|
+| 📊 Database Tables | 23 |
+| 🔌 API Endpoints | 25+ |
+| 📱 Frontend Pages | 20+ |
+| 🎨 UI Components | 15+ |
+| ✅ Integration | 100% |
+
+---
+
+## 🔧 Environment Variables
+
+### Backend (.env)
+```env
+# Database
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=shivbas_db
+
+# JWT
+JWT_SECRET=your_super_secret_key
+JWT_EXPIRES_IN=7d
+
+# Email (Gmail)
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_app_password
+```
+
+---
+
+## 📝 License
+
+This project is developed for educational purposes.
+
+---
+
+## 🙏 Acknowledgments
+
+Special thanks to **Mentor Yash** for guidance and technical support throughout the development process.
+
+---
+
+<div align="center">
+
+**Built with ❤️ by Team ShivBAS**
+
+[![GitHub](https://img.shields.io/badge/GitHub-KHILANO5/ShivBAS-181717?style=flat-square&logo=github)](https://github.com/KHILANO5/ShivBAS)
+
+</div>
