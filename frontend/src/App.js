@@ -17,7 +17,6 @@ import Contacts from './pages/Contacts';
 import Profile from './pages/Profile';
 import PurchaseOrder from './pages/PurchaseOrder';
 import PurchaseBill from './pages/PurchaseBill';
-import Payment from './pages/Payment';
 import PaymentGateway from './pages/PaymentGateway';
 import SaleOrder from './pages/SaleOrder';
 import Receipt from './pages/Receipt';
@@ -25,6 +24,11 @@ import AutoAnalytics from './pages/AutoAnalytics';
 import DashboardDirect from './pages/DashboardDirect';
 import ApiTest from './pages/ApiTest';
 import Layout from './components/Layout';
+
+// Customer Portal Pages
+import CustomerDashboard from './pages/customer/CustomerDashboard';
+import CustomerInvoices from './pages/customer/CustomerInvoices';
+import CustomerOrders from './pages/customer/CustomerOrders';
 
 function App() {
   return (
@@ -164,17 +168,6 @@ function App() {
           />
 
           <Route
-            path="/payment"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Payment />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
             path="/payment-gateway"
             element={
               <ProtectedRoute>
@@ -214,6 +207,34 @@ function App() {
                 <Layout>
                   <AutoAnalytics />
                 </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Customer Portal Routes */}
+          <Route
+            path="/customer/dashboard"
+            element={
+              <ProtectedRoute>
+                <CustomerDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/customer/invoices"
+            element={
+              <ProtectedRoute>
+                <CustomerInvoices />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/customer/orders"
+            element={
+              <ProtectedRoute>
+                <CustomerOrders />
               </ProtectedRoute>
             }
           />

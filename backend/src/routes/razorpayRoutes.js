@@ -15,6 +15,12 @@ router.post('/create-order', razorpayController.createOrder);
 // Verify payment after completion
 router.post('/verify-payment', razorpayController.verifyPayment);
 
+// Get invoice/bill balance - NEW
+router.get('/balance/:invoice_type/:invoice_id', razorpayController.getInvoiceBalance);
+
+// Direct payment (simulated - for demo)
+router.post('/direct-payment', razorpayController.directPayment);
+
 // Get payment status by order ID
 router.get('/status/:order_id', razorpayController.getPaymentStatus);
 

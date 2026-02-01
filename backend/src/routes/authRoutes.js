@@ -17,9 +17,21 @@ const { authenticate } = require('../middleware/auth');
 // POST /api/auth/register
 router.post('/register', authController.register);
 
-// User Login
+// User Login (Direct - no OTP)
 // POST /api/auth/login
 router.post('/login', authController.login);
+
+// User Login with OTP - Step 1
+// POST /api/auth/login-otp
+router.post('/login-otp', authController.loginWithOTP);
+
+// Verify OTP - Step 2
+// POST /api/auth/verify-otp
+router.post('/verify-otp', authController.verifyOTP);
+
+// Resend OTP
+// POST /api/auth/resend-otp
+router.post('/resend-otp', authController.resendOTP);
 
 // Forgot Password - Request reset token
 // POST /api/auth/forgot-password

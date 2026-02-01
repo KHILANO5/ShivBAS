@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 
 const SignUp = () => {
     const navigate = useNavigate();
-    const { login } = useAuth();
 
     const [formData, setFormData] = useState({
         name: '',
@@ -19,6 +17,7 @@ const SignUp = () => {
     const [successMessage, setSuccessMessage] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -146,19 +145,8 @@ const SignUp = () => {
             });
 
             if (response.data.success) {
-                // Show success message
-                setSuccessMessage('Account created successfully! Redirecting to dashboard...');
-
-                // Store user data and token
-                const { user, accessToken } = response.data.data;
-                localStorage.setItem('token', accessToken);
-                localStorage.setItem('user', JSON.stringify(user));
-
-                // Auto-login and redirect after 1.5 seconds
-                setTimeout(() => {
-                    login({ login_id: formData.login_id, password: formData.password });
-                    navigate('/dashboard');
-                }, 1500);
+                // Show success modal - DO NOT auto-login
+                setShowSuccessModal(true);
             } else {
                 setErrors({
                     submit: response.data.error || 'Registration failed. Please try again.'
@@ -424,6 +412,62 @@ const SignUp = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in">
+                        {/* Success Header */}
+                        <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-8 text-center">
+                            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                                <svg className="w-12 h-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <h3 className="text-2xl font-bold text-white">Account Created!</h3>
+                            <p className="text-green-100 mt-2">Your account has been registered successfully</p>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-6">
+                            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                                        <svg className="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-gray-900">{formData.name}</p>
+                                        <p className="text-sm text-gray-500">{formData.email}</p>
+                                    </div>
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                    <p><span className="font-medium">Login ID:</span> {formData.login_id}</p>
+                                </div>
+                            </div>
+
+                            <p className="text-sm text-gray-600 text-center mb-4">
+                                Please login with your credentials to access the system.
+                            </p>
+
+                            {/* Go to Login Button */}
+                            <button
+                                onClick={() => {
+                                    setShowSuccessModal(false);
+                                    navigate('/login');
+                                }}
+                                className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-all flex items-center justify-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                                </svg>
+                                Go to Login
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

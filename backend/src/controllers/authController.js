@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../../config/database');
 const { validatePassword, validateLoginId, validateEmail } = require('../utils/validation');
 const { generateAccessToken, generateRefreshToken, verifyToken } = require('../utils/jwt');
+const { sendLoginWelcomeEmail } = require('../utils/email');
 const crypto = require('crypto');
 
 // ============================================================================
@@ -170,6 +171,11 @@ const login = async (req, res) => {
     // Generate tokens with remember me support (use user.id, not user.user_id)
     const accessToken = generateAccessToken(user.id, user.role, rememberMe);
     const refreshToken = generateRefreshToken(user.id, rememberMe);
+
+    // Send welcome notification email (don't wait for it)
+    sendLoginWelcomeEmail(user.email, user.name).catch(err => {
+      console.log('Welcome email sending failed:', err.message);
+    });
 
     res.json({
       success: true,
@@ -587,9 +593,265 @@ const changePassword = async (req, res) => {
   }
 };
 
+// ============================================================================
+// LOGIN WITH OTP - Step 1: Validate credentials and send OTP
+// POST /api/auth/login-otp
+// ============================================================================
+const loginWithOTP = async (req, res) => {
+  try {
+    const { login_id, password } = req.body;
+
+    if (!login_id || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Login ID and password are required'
+      });
+    }
+
+    // Find user
+    const [users] = await pool.query(
+      'SELECT id, login_id, email, password, name, role, status FROM users WHERE login_id = ?',
+      [login_id]
+    );
+
+    if (users.length === 0) {
+      return res.status(401).json({
+        success: false,
+        error: 'Wrong username or password'
+      });
+    }
+
+    const user = users[0];
+
+    // Check if account is active
+    if (user.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        error: 'Your account has been suspended or deactivated.'
+      });
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: 'Wrong username or password'
+      });
+    }
+
+    // Generate OTP
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    // Store OTP in database
+    await pool.query(
+      'UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?',
+      [otp, otpExpiry, user.id]
+    );
+
+    // Send OTP via email
+    const emailResult = await sendOTPEmail(user.email, otp, user.name);
+
+    if (!emailResult.success) {
+      console.error('Failed to send OTP email:', emailResult.error);
+      // Still allow login for development - remove this in production
+      return res.json({
+        success: true,
+        message: 'OTP sent to your email',
+        data: {
+          user_id: user.id,
+          email: user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3'), // Mask email
+          otp_required: true,
+          // For development only - remove in production:
+          dev_otp: process.env.NODE_ENV === 'development' ? otp : undefined
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'OTP sent to your email',
+      data: {
+        user_id: user.id,
+        email: user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3'), // Mask email
+        otp_required: true
+      }
+    });
+  } catch (error) {
+    console.error('Login OTP error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Login failed'
+    });
+  }
+};
+
+// ============================================================================
+// VERIFY OTP - Step 2: Verify OTP and complete login
+// POST /api/auth/verify-otp
+// ============================================================================
+const verifyOTP = async (req, res) => {
+  try {
+    const { user_id, otp, remember } = req.body;
+    const rememberMe = remember === true;
+
+    if (!user_id || !otp) {
+      return res.status(400).json({
+        success: false,
+        error: 'User ID and OTP are required'
+      });
+    }
+
+    // Find user with OTP
+    const [users] = await pool.query(
+      'SELECT id, login_id, email, name, role, signup_type, status, reset_token, reset_token_expiry, created_at, updated_at FROM users WHERE id = ?',
+      [user_id]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    const user = users[0];
+
+    // Check OTP
+    if (user.reset_token !== otp) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid OTP'
+      });
+    }
+
+    // Check OTP expiry
+    if (new Date() > new Date(user.reset_token_expiry)) {
+      return res.status(401).json({
+        success: false,
+        error: 'OTP has expired. Please request a new one.'
+      });
+    }
+
+    // Clear OTP
+    await pool.query(
+      'UPDATE users SET reset_token = NULL, reset_token_expiry = NULL WHERE id = ?',
+      [user.id]
+    );
+
+    // Generate tokens
+    const accessToken = generateAccessToken(user.id, user.role, rememberMe);
+    const refreshToken = generateRefreshToken(user.id, rememberMe);
+
+    // Send login success email notification
+    sendLoginSuccessEmail(user.email, user.name).catch(err => {
+      console.error('Failed to send login success email:', err);
+    });
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        user: {
+          user_id: user.id,
+          login_id: user.login_id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          signup_type: user.signup_type,
+          status: user.status,
+          created_at: user.created_at,
+          updated_at: user.updated_at
+        },
+        accessToken,
+        refreshToken
+      }
+    });
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'OTP verification failed'
+    });
+  }
+};
+
+// ============================================================================
+// RESEND OTP
+// POST /api/auth/resend-otp
+// ============================================================================
+const resendOTP = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'User ID is required'
+      });
+    }
+
+    // Find user
+    const [users] = await pool.query(
+      'SELECT id, email, name, status FROM users WHERE id = ?',
+      [user_id]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    const user = users[0];
+
+    if (user.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        error: 'Account is not active'
+      });
+    }
+
+    // Generate new OTP
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+
+    // Store OTP
+    await pool.query(
+      'UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?',
+      [otp, otpExpiry, user.id]
+    );
+
+    // Send OTP
+    const emailResult = await sendOTPEmail(user.email, otp, user.name);
+
+    res.json({
+      success: true,
+      message: 'OTP resent to your email',
+      data: {
+        email: user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3'),
+        // For development only:
+        dev_otp: process.env.NODE_ENV === 'development' ? otp : undefined
+      }
+    });
+  } catch (error) {
+    console.error('Resend OTP error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to resend OTP'
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
+  loginWithOTP,
+  verifyOTP,
+  resendOTP,
   getCurrentUser,
   logout,
   refreshToken,

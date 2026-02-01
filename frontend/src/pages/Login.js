@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+const API_BASE = 'http://localhost:5000/api';
+
 const Login = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
@@ -30,18 +32,11 @@ const Login = () => {
 
         // Validation
         if (!formData.login_id || !formData.password) {
-            if (!formData.login_id && !formData.password) {
-                setError('Please enter both your Login ID and password.');
-            } else if (!formData.login_id) {
-                setError('Please enter your Login ID.');
-            } else {
-                setError('Please enter your password.');
-            }
+            setError('Please enter both your Login ID and password.');
             setLoading(false);
             return;
         }
 
-        // Additional validation for login_id format
         if (formData.login_id.length < 6 || formData.login_id.length > 12) {
             setError('Login ID must be between 6 and 12 characters.');
             setLoading(false);
@@ -54,13 +49,40 @@ const Login = () => {
             return;
         }
 
-        const result = await login({ ...formData, remember: rememberMe });
-        setLoading(false);
+        try {
+            const response = await fetch(`${API_BASE}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    login_id: formData.login_id,
+                    password: formData.password,
+                    remember: rememberMe
+                })
+            });
+            const data = await response.json();
 
-        if (result.success) {
-            navigate('/dashboard');
-        } else {
-            setError(result.error);
+            if (data.success) {
+                // Store token and user data
+                localStorage.setItem('token', data.data.accessToken);
+                localStorage.setItem('user', JSON.stringify(data.data.user));
+                
+                // Role-based redirect
+                const userRole = data.data.user?.role || 'portal';
+                if (userRole === 'admin') {
+                    navigate('/dashboard');
+                } else {
+                    navigate('/customer/dashboard');
+                }
+                
+                // Reload to update auth context
+                window.location.reload();
+            } else {
+                setError(data.error || 'Login failed');
+            }
+        } catch (err) {
+            setError('Unable to connect to server');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -74,19 +96,14 @@ const Login = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
                     </div>
-                    <h2 className="mt-6 text-3xl font-bold text-gray-900">
-                        ShivBAS
-                    </h2>
-                    <p className="mt-2 text-sm text-gray-600">
-                        Budget & Analytics System
-                    </p>
+                    <h2 className="mt-6 text-3xl font-bold text-gray-900">ShivBAS</h2>
+                    <p className="mt-2 text-sm text-gray-600">Budget & Analytics System</p>
                 </div>
 
-                {/* Login Form */}
                 <div className="card">
                     <form className="space-y-6" onSubmit={handleSubmit}>
                         {error && (
-                            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg" role="alert">
+                            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg">
                                 <div className="flex items-start">
                                     <svg className="w-5 h-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
@@ -158,7 +175,6 @@ const Login = () => {
                             <div className="flex items-center">
                                 <input
                                     id="remember-me"
-                                    name="remember-me"
                                     type="checkbox"
                                     checked={rememberMe}
                                     onChange={(e) => setRememberMe(e.target.checked)}
@@ -168,76 +184,36 @@ const Login = () => {
                                     Remember me for 30 days
                                 </label>
                             </div>
-
-                            <div className="text-sm">
-                                <button
-                                    type="button"
-                                    className="font-medium text-primary-600 hover:text-primary-500"
-                                    onClick={() => navigate('/forgot-password')}
-                                >
-                                    Forgot password?
-                                </button>
-                            </div>
                         </div>
 
-                        <div>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? (
+                                <span className="flex items-center justify-center">
+                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Signing in...
+                                </span>
+                            ) : (
+                                'Sign In'
+                            )}
+                        </button>
+
+                        <div className="mt-4 text-center">
                             <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                                type="button"
+                                onClick={() => navigate('/signup')}
+                                className="font-medium text-primary-600 hover:text-primary-500"
                             >
-                                {loading ? (
-                                    <span className="flex items-center justify-center">
-                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Logging in...
-                                    </span>
-                                ) : (
-                                    'Login'
-                                )}
+                                Create an account
                             </button>
                         </div>
                     </form>
-
-                    <div className="mt-6">
-                        <div className="relative">
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-gray-300"></div>
-                            </div>
-                            {/* <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-white text-gray-500">Test Credentials</span>
-                            </div> */}
-                        </div>
-
-                        {/* <div className="mt-4 space-y-2 text-xs text-gray-600 bg-gray-50 p-3 rounded-lg">
-                            <p><strong>Admin:</strong> admin_user / Test@123</p>
-                            <p><strong>Portal:</strong> john_portal / Test@123</p>
-                        </div> */}
-
-                        {/* Sign Up Link */}
-                        <div className="mt-6">
-                            <div className="relative">
-                                <div className="absolute inset-0 flex items-center">
-                                    {/* <div className="w-full border-t border-gray-300"></div> */}
-                                </div>
-                                {/* <div className="relative flex justify-center text-sm">
-                                    <span className="px-2 bg-white text-gray-500">New to ShivBAS?</span>
-                                </div> */}
-                            </div>
-
-                            <div className="mt-4 text-center">
-                                <button
-                                    type="button"
-                                    onClick={() => navigate('/signup')}
-                                    className="font-medium text-primary-600 hover:text-primary-500"
-                                >
-                                    Create an account
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
