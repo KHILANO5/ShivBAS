@@ -23,7 +23,7 @@ const Invoices = () => {
         status: 'draft',
         payment_status: 'not_paid',
         line_items: [
-            { product_id: '', quantity: 1, unit_price: '', tax_amount: 0 }
+            { product_id: '', quantity: 1, unit_price: 0, tax_amount: 0 }
         ]
     });
 
@@ -43,10 +43,13 @@ const Invoices = () => {
 
             setInvoices(invoicesResponse.data.data || []);
             // Filter only customers from contacts
-            const customersData = (customersResponse.data.data || []).filter(c => c.type === 'customer');
+            const customersData = (customersResponse.data.data || customersResponse.data || []).filter(c => c.type === 'customer');
+            console.log('Customers loaded:', customersData);
             setCustomers(customersData);
-            setAnalytics(analyticsResponse.data.data || []);
-            setProducts(productsResponse.data.data || []);
+            setAnalytics(analyticsResponse.data.data || analyticsResponse.data || []);
+            const productsData = productsResponse.data.data || productsResponse.data || [];
+            console.log('Products loaded:', productsData);
+            setProducts(productsData);
         } catch (error) {
             console.error('Error fetching data:', error);
             alert('Failed to fetch data');
@@ -71,9 +74,9 @@ const Invoices = () => {
         if (field === 'product_id') {
             const product = products.find(p => p.id === parseInt(value));
             if (product) {
-                newLineItems[index].unit_price = product.sale_price;
-                const subtotal = newLineItems[index].quantity * product.sale_price;
-                newLineItems[index].tax_amount = (subtotal * product.tax_rate) / 100;
+                newLineItems[index].unit_price = parseFloat(product.unit_price) || 0;
+                const subtotal = (newLineItems[index].quantity || 1) * parseFloat(product.unit_price);
+                newLineItems[index].tax_amount = (subtotal * parseFloat(product.tax_rate || 0)) / 100;
             }
         }
 
@@ -81,8 +84,8 @@ const Invoices = () => {
         if (field === 'quantity') {
             const product = products.find(p => p.id === parseInt(newLineItems[index].product_id));
             if (product) {
-                const subtotal = parseInt(value) * newLineItems[index].unit_price;
-                newLineItems[index].tax_amount = (subtotal * product.tax_rate) / 100;
+                const subtotal = parseInt(value) * (parseFloat(newLineItems[index].unit_price) || 0);
+                newLineItems[index].tax_amount = (subtotal * (parseFloat(product.tax_rate) || 0)) / 100;
             }
         }
 
@@ -95,7 +98,7 @@ const Invoices = () => {
     const addLineItem = () => {
         setFormData(prev => ({
             ...prev,
-            line_items: [...prev.line_items, { product_id: '', quantity: 1, unit_price: '', tax_amount: 0 }]
+            line_items: [...prev.line_items, { product_id: '', quantity: 1, unit_price: 0, tax_amount: 0 }]
         }));
     };
 
@@ -110,8 +113,8 @@ const Invoices = () => {
 
     const calculateTotal = () => {
         return formData.line_items.reduce((total, item) => {
-            const subtotal = (item.quantity || 0) * (item.unit_price || 0);
-            return total + subtotal + (item.tax_amount || 0);
+            const subtotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+            return total + subtotal + (parseFloat(item.tax_amount) || 0);
         }, 0);
     };
 
@@ -209,7 +212,7 @@ const Invoices = () => {
             status: 'draft',
             payment_status: 'not_paid',
             line_items: [
-                { product_id: '', quantity: 1, unit_price: '', tax_amount: 0 }
+                { product_id: '', quantity: 1, unit_price: 0, tax_amount: 0 }
             ]
         });
     };
@@ -227,7 +230,7 @@ const Invoices = () => {
     // Calculate statistics
     const stats = {
         total: filteredInvoices.length,
-        totalAmount: filteredInvoices.reduce((sum, inv) => sum + inv.total_amount, 0),
+        totalAmount: filteredInvoices.reduce((sum, inv) => sum + (parseFloat(inv.total_amount) || 0), 0),
         draft: filteredInvoices.filter(inv => inv.status === 'draft').length,
         posted: filteredInvoices.filter(inv => inv.status === 'posted').length,
         unpaid: filteredInvoices.filter(inv => inv.payment_status === 'not_paid').length
@@ -284,7 +287,7 @@ const Invoices = () => {
                     </div>
                     <div className="card">
                         <p className="text-sm font-medium text-gray-600">Total Amount</p>
-                        <p className="text-2xl font-bold text-green-600 mt-2">₹{stats.totalAmount.toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-green-600 mt-2">₹{stats.totalAmount.toLocaleString('en-IN')}</p>
                     </div>
                     <div className="card">
                         <p className="text-sm font-medium text-gray-600">Draft</p>
@@ -429,7 +432,7 @@ const Invoices = () => {
                                                     <div className="text-sm text-gray-600">{invoice.analytics_event || '-'}</div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm font-semibold text-gray-900">₹{invoice.total_amount.toLocaleString()}</div>
+                                                    <div className="text-sm font-semibold text-gray-900">₹{parseFloat(invoice.total_amount || 0).toLocaleString('en-IN')}</div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusBadge.color}`}>
@@ -577,7 +580,7 @@ const Invoices = () => {
                                                         <option value="">Select product</option>
                                                         {products.map(product => (
                                                             <option key={product.id} value={product.id}>
-                                                                {product.name} (₹{product.sale_price})
+                                                                {product.name} (₹{parseFloat(product.unit_price || 0).toLocaleString()})
                                                             </option>
                                                         ))}
                                                     </select>

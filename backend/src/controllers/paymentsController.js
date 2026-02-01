@@ -140,31 +140,49 @@ const getPayments = async (req, res) => {
   try {
     const { start_date, end_date, payment_mode } = req.query;
 
-    let query = 'SELECT * FROM payments WHERE 1=1';
+    let query = `
+      SELECT p.*, 
+             ci.customer_id,
+             c_inv.name as invoice_customer_name,
+             vb.vendor_id,
+             c_bill.name as bill_vendor_name
+      FROM payments p
+      LEFT JOIN customer_invoices ci ON p.invoice_id = ci.id
+      LEFT JOIN contacts c_inv ON ci.customer_id = c_inv.id
+      LEFT JOIN vendor_bills vb ON p.bill_id = vb.id
+      LEFT JOIN contacts c_bill ON vb.vendor_id = c_bill.id
+      WHERE 1=1
+    `;
     const params = [];
 
     if (start_date) {
-      query += ' AND payment_date >= ?';
+      query += ' AND p.payment_date >= ?';
       params.push(start_date);
     }
 
     if (end_date) {
-      query += ' AND payment_date <= ?';
+      query += ' AND p.payment_date <= ?';
       params.push(end_date);
     }
 
     if (payment_mode) {
-      query += ' AND payment_mode = ?';
+      query += ' AND p.payment_mode = ?';
       params.push(payment_mode);
     }
 
-    query += ' ORDER BY payment_date DESC, created_at DESC';
+    query += ' ORDER BY p.payment_date DESC, p.created_at DESC';
 
     const [payments] = await pool.query(query, params);
 
+    // Enrich with partner name
+    const enrichedPayments = payments.map(p => ({
+      ...p,
+      partner_name: p.invoice_customer_name || p.bill_vendor_name || 'Unknown'
+    }));
+
     res.json({
       success: true,
-      data: payments
+      data: enrichedPayments
     });
   } catch (error) {
     console.error('Get payments error:', error);

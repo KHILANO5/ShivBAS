@@ -108,7 +108,7 @@ const getTransactions = async (req, res) => {
     
     if (!type || type === 'invoice') {
       const [invoices] = await pool.query(`
-        SELECT i.*, 'invoice' as transaction_type, c.name as contact_name, u.name as created_by_name
+        SELECT i.*, 'invoice' as transaction_type, c.name as customer_name, c.name as contact_name, u.name as created_by_name
         FROM customer_invoices i
         LEFT JOIN contacts c ON i.customer_id = c.id
         LEFT JOIN users u ON i.created_by_user_id = u.id
@@ -121,7 +121,7 @@ const getTransactions = async (req, res) => {
     
     if (!type || type === 'bill') {
       const [bills] = await pool.query(`
-        SELECT b.*, 'bill' as transaction_type, c.name as contact_name, u.name as created_by_name
+        SELECT b.*, 'bill' as transaction_type, c.name as vendor_name, c.name as contact_name, u.name as created_by_name
         FROM vendor_bills b
         LEFT JOIN contacts c ON b.vendor_id = c.id
         LEFT JOIN users u ON b.created_by_user_id = u.id

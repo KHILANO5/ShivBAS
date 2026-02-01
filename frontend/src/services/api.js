@@ -153,4 +153,13 @@ export const purchaseOrdersAPI = {
     delete: (id) => api.delete(`/purchase-orders/${id}`),
 };
 
+// Sale Orders APIs
+export const saleOrdersAPI = {
+    getAll: (params) => api.get('/sale-orders', { params }),
+    getById: (id) => api.get(`/sale-orders/${id}`),
+    create: (data) => api.post('/sale-orders', data),
+    update: (id, data) => api.put(`/sale-orders/${id}`, data),
+    delete: (id) => api.delete(`/sale-orders/${id}`),
+};
+
 export default api;

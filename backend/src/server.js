@@ -25,6 +25,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const purchaseOrdersRoutes = require('./routes/purchaseOrdersRoutes');
 const purchaseBillsRoutes = require('./routes/purchaseBillsRoutes');
 const razorpayRoutes = require('./routes/razorpayRoutes');
+const saleOrdersRoutes = require('./routes/saleOrdersRoutes');
 
 const app = express();
 
@@ -95,6 +96,9 @@ app.use('/api/purchase-bills', purchaseBillsRoutes);
 
 // Razorpay Payment Routes
 app.use('/api/razorpay', razorpayRoutes);
+
+// Sale Orders Routes
+app.use('/api/sale-orders', saleOrdersRoutes);
 
 // ============================================================================
 // HEALTH CHECK ENDPOINT
